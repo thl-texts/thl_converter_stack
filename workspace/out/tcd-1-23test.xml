@@ -8,26 +8,25 @@
 				<title lang="tib" n="cover">ཐེག་པའི་མཆོག་རིན་པོ་ཆེའི་མཛོད།</title>
 				<title lang="san" rend="script:deva"><!--Title San--></title>
 				<title lang="san" n="cover" rend="script:tib"><!--Cover Title San in Tib--></title>
-				<title lang="san" n="cover" rend="script:lanydza"
-					><!--Cover Title San in Lanydza--></title>
-				<title lang="tib" n="spine" />
-				<title lang="tib" n="margin" />
+				<title lang="san" n="cover" rend="script:lanydza"><!--Cover Title San in Lanydza--></title>
+				<title lang="tib" n="spine"/>
+				<title lang="tib" n="margin"/>
 				<author>ཀློང་ཆེན་རབ་འབྱམས་པ།</author>
 			</titleStmt>
 			<publicationStmt n="digital-file">
 				<respStmt n="creation">
 					<resp>Creator</resp>
-					<name n="agent" />
-					<date n="start" />
-					<date n="end" />
+					<name n="agent"/>
+					<date n="start"/>
+					<date n="end"/>
 					<name type="place"><geogName>Lhasa Input Center</geogName></name>
 				</respStmt>
 				<respStmt n="proofing">
 					<resp>Proofer</resp>
 					<name n="agent">Tsering Gyurme, and then Tibet U.</name>
-					<date n="start" />
+					<date n="start"/>
 					<date n="end">2010</date>
-					<name type="place"><geogName /></name>
+					<name type="place"><geogName/></name>
 				</respStmt>
 				<respStmt n="proofing">
 					<resp>Second Proofer</resp>
@@ -52,12 +51,12 @@
 				</respStmt>
 				<respStmt n="conversion">
 					<resp>Conversion</resp>
-					<name n="agent" />
-					<date n="start" />
-					<date n="end" />
-					<name type="place"><geogName /></name>
+					<name n="agent"/>
+					<date n="start"/>
+					<date n="end"/>
+					<name type="place"><geogName/></name>
 				</respStmt>
-				<publisher id="thdl">
+				<publisher id="thdl"> 
 					<orgName>Tibetan &amp; Himalayan Library</orgName>
 					<address>
 						<addrLine rend="url">http://www.thlib.org/</addrLine>
@@ -66,35 +65,33 @@
 				<pubPlace>
 					<orgName type="university">University of Virginia</orgName>
 					<placeName>
-						<settlement type="city">Charlottesville</settlement>
-						<region type="state">Virginia</region>
-						<num type="zipcode">22904</num>
-					</placeName>
+						<settlement type="city">Charlottesville</settlement> 
+						<region type="state">Virginia</region> 
+						<num type="zipcode">22904</num> 
+					</placeName> 
 				</pubPlace>
-				<date>2020-10-12</date>
+				<date>2020-10-13</date>
 			</publicationStmt>
 			<sourceDesc>
 				<!-- Cover page full contents -->
-				<p n="cover-page" lang="tib">ཐེག་པའི་མཆོག་རིན་པོ་ཆེའི་མཛོད་བཞུགས་སྷོ།།
-					ས་དྷུ་དྲི་ཤྱ་ཧོ།། དགེའོ།།</p>
+				<p n="cover-page" lang="tib">ཐེག་པའི་མཆོག་རིན་པོ་ཆེའི་མཛོད་བཞུགས་སྷོ།། ས་དྷུ་དྲི་ཤྱ་ཧོ།། དགེའོ།།</p>
 				<!--The Bibliographic Information of the Original Text or Journal if from a print publication-->
 				<biblFull n="original">
 					<titleStmt n="collection">
 						<title lang="tib">མཛོད་བདུན།</title>
 					</titleStmt>
-					<extent>
-						<num n="vol">1 <rs type="vol-letter" lang="tib"
-							><!--Volume Letter--></rs></num>
-						<num type="page-range" />
-						<num type="total-pages">1-697, 1-601 (chapters 1-25)</num>
-					</extent>
+					<extent> 
+						<num n="vol">1
+							<rs type="vol-letter" lang="tib"><!--Volume Letter--></rs></num> 
+						<num type="page-range"/> 
+						<num type="total-pages">1-697, 1-601 (chapters 1-25)</num> </extent>
 					<publicationStmt>
 						<publisher>a ’dzom chos sgar</publisher>
 						<pubPlace>dkar mdzes bod rigs rang skyong khul, dpal yul rdzong, a 'dzom chos sgar</pubPlace>
-						<date />
-						<idno type="isbn" />
-						<idno type="call-number" />
-						<idno type="other" />
+						<date/>
+						<idno type="isbn"/>
+						<idno type="call-number"/>
+						<idno type="other"/>
 					</publicationStmt>
 				</biblFull>
 				<p n="problems">See JIRA</p>
@@ -141,276 +138,5 @@
 		</profileDesc>
 	</teiHeader>
 	<text>
-		<front>
-			<head>1 ཀླད།</head>
-			<div n="1">
-				<head>1.1 མཚན་བྱང་།</head>
-				<p />
-			</div>
-			<div n="2">
-				<head>1.2 མཚན།</head>
-				<p />
-			</div>
-			<div n="2">
-				<head>1.3 རྩོམ་པ་པོའི་ཕྱག་འཚལ།</head>
-				<p />
-			</div>
-			<div n="2">
-				<head>1.4 མཆོད་བརྗོད།</head>
-				<p />
-			</div>
-			<div n="2">
-				<head>1.5 རྩོམ་པར་དམ་བཅའ་བ།</head>
-				<p />
-			</div>
-			<div n="2">
-				<head>1.6 མགོ་བརྗོད།</head>
-				<p />
-			</div>
-		</front>
-		<body>
-			<head>2 གཞུང་།</head>
-			<div n="1">
-				<head>2.1 བྱུང་ཚུལ་གཏན་ལ་དབབ་པ་སྟེ་རིམ་ཁང་དང་པོ།</head>
-				<p />
-				<div n="2">
-					<head>2.1.1
-						གདོད་མའི་མགོན་པོ་མངོན་པར་བྱང་ཆུབ་ནས་ཞིང་ཁམས་ཇི་ལྟར་བཀོད་པའི་ཚུལ་རྒྱ་མཚོ།</head>
-					<p />
-				</div>
-				<div n="3">
-					<head>2.1.2 ཞིང་འདིར་རྡོ་རྗེ་འཆང་གི་རྣམ་པར་འཕྲུལ་པས་ཞི་བ་བརྙེས་པའི་ཚུལ།</head>
-					<p />
-					<div n="3">
-						<head>2.1.2.1
-							སྐུ་གསུང་ཐུགས་མི་ཟད་པ་རྒྱན་གྱི་འཁོར་ལོའི་མཛད་པ་སུམ་ཅུ་རྩ་དྲུག</head>
-						<p />
-						<div n="4">
-							<head>2.1.2.1.1 སྐུ།</head>
-							<p />
-							<div n="5">
-								<head>2.1.2.1.1.1 སྐུའི་ཕྱིའི་མཛད་པ་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.1.1.2 ནང་གི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.1.1.3 གསང་བའི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.1.2 གསུང་།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.1.2.1 གསུང་གི་ཕྱིའི་མཛད་པ་བཞི</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.1.2.2 ནང་གི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.1.2.3 གསང་བའི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.1.3 ཐུགས།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.1.3.1 ཐུགས་ཀྱི་ཕྱིའི་མཛད་པ་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.1.3.2 ནང་གི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.1.3.3 གསང་བའི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.2
-									ལོངས་སྤྱོད་རྫོགས་པ་སྐུའི་སྐུ་གསུང་ཐུགས་མི་བཟད་པ་རྒྱན་གྱི་འཁོར་ལོའི་མཛད་པ་སུམ་ཅུ་རྩ་དྲུག་ཏུ་རང་ཤར་བ།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.2.1 སྐུ།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.2.1.1 སྐུའི་ཕྱིའི་མཛད་པ་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.2.1.2 ནང་གི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.2.1.3 གསང་བའི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.2.2 གསུང་།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.2.2.1 གསུང་གི་ཕྱིའི་མཛད་པ་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.2.2.2 ནང་གི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.2.2.3 གསང་བའི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.2.3 ཐུགས།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.2.3.1 ཐུགས་ཀྱི་ཕྱིའི་མཛད་པ་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.2.3.2 ནང་གི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.2.2.3.3 གསང་བའི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3
-									སྤྲུལ་པའི་སྐུ་སྤྲོས་པས་ཆོས་ཀྱི་འཁོར་ལོ་བསྐོར་བའི་ཚུལ།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.1 སྤྲུལ་པ་ཆེན་པོ་གསུམ་སྣང་བས་འགྲོ་བ་ལ་ཕན་པ་མཛད་པ།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.2
-									གནས་རིས་བཅུ་གཉིས་སུ་སྤྲུལ་སྐུ་བཅུ་གཉིས་བྱོན་པའི་ཚུལ།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.2.1 སྒྲ་ཐལ་འགྱུར་གྱི་རྒྱུད།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.2.2 སྐུ་གསུང་ཐུགས་ཡོན་ཏན་འཕྲིན་ལས་ཀྱི་རྒྱུད་ལྔ།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.2.3 རྨ་བྱ་མཇིང་བསྣོལ།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.2.4
-									སེམས་སྡེ་རྩ་བའི་རྒྱུད་ལྔ། ཡན་ལག་གི་རྒྱུད་དྲུག་སྟེ་བཅུ་གཅིག</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.2.5 ཕ་རོལ་ཏུ་ཕྱིན་པ་དྲུག</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.2.6
-									རིག་པ་རང་ཤར་ཆེན་པོའི་རྒྱུད་ལ་སོགས་པ་མངོན་སུམ་འོད་གསལ་གྱི་རྒྱུད་རྣམས།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.2.7 ཆོས་རགས་པ་འདུལ་བའི་རྒྱུད་བཅུ་ལ་སོགས་པ།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.2.8 འདུལ་བ་ཁྲི་ཕྲག་དཔག་ཏུ་མེད་པ།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.2.9 འཕྲ་རྒྱུད་བདུན་པ་ལ་སོགས་པ།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.2.10
-									ཆོས་མདོ་སྡེ་དང༌། ཀྲཱི་ཡ་དང༌། ལུང་ཨ་ནུ་ལ་སོགས་པ་ཁྲི་ཕྲག་བརྒྱད།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.2.11 ངེས་པ་དོན་གྱི་ཐེག་པ་འབའ་ཞིག</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.2.12 སྡེ་སྣོད་གསུམ་ལ་སོགས་པ།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.3
-									འདི་དག་གིའང་སྐུ་གསུང་ཐུགས་མི་བཟད་པ་རྒྱན་གྱི་འཁོར་ལོའི་མཛད་པ་སུམ་ཅུ་རྩ་དྲུག</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.3.1 སྐུ།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.3.1.1 སྐུའི་ཕྱིའི་མཛད་པ་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.3.1.2 ནང་གི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.3.1.3 གསང་བའི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.3.2 གསུང་།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.3.2.1 གསུང་གི་ཕྱིའི་མཛད་པ་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.3.2.2 ནང་གི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.3.2.3 གསང་བའི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.3.3 ཐུགས།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.3.3.1 ཐུགས་ཀྱི་ཕྱིའི་མཛད་པ་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.3.3.2 ནང་གི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.3.3.3.3 གསང་བའི་བཞི།</head>
-								<p />
-							</div>
-							<div n="6">
-								<head>2.1.4 ལེའུ་རེ་རེའི་མཇུག་གི་སྨོན་ལམ།{}</head>
-								<p />
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</body>
-	</text>
+	<front><head><num>1</num> ཀླད།</head><div n="1"><head><num>1.1</num> མཚན་བྱང་།</head><p/></div><div n="1"><head><num>1.2</num> མཚན།</head><p/></div><div n="1"><head><num>1.3</num> རྩོམ་པ་པོའི་ཕྱག་འཚལ།</head><p/></div><div n="1"><head><num>1.4</num> མཆོད་བརྗོད།</head><p/></div><div n="1"><head><num>1.5</num> རྩོམ་པར་དམ་བཅའ་བ།</head><p/></div><div n="1"><head><num>1.6</num> མགོ་བརྗོད།</head><p/></div></front><body><head><num>2</num> གཞུང་།</head><div n="1"><head><num>2.1</num> བྱུང་ཚུལ་གཏན་ལ་དབབ་པ་སྟེ་རིམ་ཁང་དང་པོ།</head><p/><div n="2"><head><num>2.1.1</num> གདོད་མའི་མགོན་པོ་མངོན་པར་བྱང་ཆུབ་ནས་ཞིང་ཁམས་ཇི་ལྟར་བཀོད་པའི་ཚུལ་རྒྱ་མཚོ།</head><p/><div n="3"><head><num>2.1.1.1</num> གཞི་སྣང་དུ་ཤར་བའི་རྩལ་</head><p/><div n="4"><head><num>2.1.1.1.1</num> སྤྲུལ་པའི་སངས་རྒྱས་</head><p/><div n="5"><head><num>2.1.1.1.1.1</num> དྲང་སྲོང་མངོན་པར་ཤེས་པ་</head><p/></div></div></div></div><div n="2"><head><num>2.1.2</num> ཞིང་འདིར་རྡོ་རྗེ་འཆང་གི་རྣམ་པར་འཕྲུལ་པས་ཞི་བ་བརྙེས་པའི་ཚུལ།</head><p/><div n="3"><head><num>2.1.2.1</num> སྐུ་གསུང་ཐུགས་མི་ཟད་པ་རྒྱན་གྱི་འཁོར་ལོའི་མཛད་པ་སུམ་ཅུ་རྩ་དྲུག</head><p/><div n="4"><head><num>2.1.2.1.1</num> སྐུ།</head><p/><div n="5"><head><num>2.1.2.1.1.1</num> སྐུའི་ཕྱིའི་མཛད་པ་བཞི།</head><p/></div><div n="5"><head><num>2.1.2.1.1.2</num> ནང་གི་བཞི།</head><p/></div><div n="5"><head><num>2.1.2.1.1.3</num> གསང་བའི་བཞི།</head><p/></div></div><div n="4"><head><num>2.1.2.1.2</num> གསུང་།</head><p/><div n="5"><head><num>2.1.2.1.2.1</num> གསུང་གི་ཕྱིའི་མཛད་པ་བཞི</head><p/></div><div n="5"><head><num>2.1.2.1.2.2</num> ནང་གི་བཞི།</head><p/></div><div n="5"><head><num>2.1.2.1.2.3</num> གསང་བའི་བཞི།</head><p/></div></div><div n="4"><head><num>2.1.2.1.3</num> ཐུགས།</head><p/><div n="5"><head><num>2.1.2.1.3.1</num> ཐུགས་ཀྱི་ཕྱིའི་མཛད་པ་བཞི།</head><p/></div><div n="5"><head><num>2.1.2.1.3.2</num> ནང་གི་བཞི།</head><p/></div><div n="5"><head><num>2.1.2.1.3.3</num> གསང་བའི་བཞི།</head><p/></div></div></div><div n="3"><head><num>2.1.2.2</num> ལོངས་སྤྱོད་རྫོགས་པ་སྐུའི་སྐུ་གསུང་ཐུགས་མི་བཟད་པ་རྒྱན་གྱི་འཁོར་ལོའི་མཛད་པ་སུམ་ཅུ་རྩ་དྲུག་ཏུ་རང་ཤར་བ།</head><p/><div n="4"><head><num>2.1.2.2.1</num> སྐུ།</head><p/><div n="5"><head><num>2.1.2.2.1.1</num> སྐུའི་ཕྱིའི་མཛད་པ་བཞི།</head><p/></div><div n="5"><head><num>2.1.2.2.1.2</num> ནང་གི་བཞི།</head><p/></div><div n="5"><head><num>2.1.2.2.1.3</num> གསང་བའི་བཞི།</head><p/></div></div><div n="4"><head><num>2.1.2.2.2</num> གསུང་།</head><p/><div n="5"><head><num>2.1.2.2.2.1</num> གསུང་གི་ཕྱིའི་མཛད་པ་བཞི།</head><p/></div><div n="5"><head><num>2.1.2.2.2.2</num> ནང་གི་བཞི།</head><p/></div><div n="5"><head><num>2.1.2.2.2.3</num> གསང་བའི་བཞི།</head><p/></div></div><div n="4"><head><num>2.1.2.2.3</num> ཐུགས།</head><p/><div n="5"><head><num>2.1.2.2.3.1</num> ཐུགས་ཀྱི་ཕྱིའི་མཛད་པ་བཞི།</head><p/></div><div n="5"><head><num>2.1.2.2.3.2</num> ནང་གི་བཞི།</head><p/></div><div n="5"><head><num>2.1.2.2.3.3</num> གསང་བའི་བཞི།</head><p/></div></div></div></div><div n="2"><head><num>2.1.3</num> སྤྲུལ་པའི་སྐུ་སྤྲོས་པས་ཆོས་ཀྱི་འཁོར་ལོ་བསྐོར་བའི་ཚུལ།</head><p/><div n="3"><head><num>2.1.3.1</num> སྤྲུལ་པ་ཆེན་པོ་གསུམ་སྣང་བས་འགྲོ་བ་ལ་ཕན་པ་མཛད་པ།</head><p/></div><div n="3"><head><num>2.1.3.2</num> གནས་རིས་བཅུ་གཉིས་སུ་སྤྲུལ་སྐུ་བཅུ་གཉིས་བྱོན་པའི་ཚུལ།</head><p/><div n="4"><head><num>2.1.3.2.1</num> སྒྲ་ཐལ་འགྱུར་གྱི་རྒྱུད།</head><p/></div><div n="4"><head><num>2.1.3.2.2</num> སྐུ་གསུང་ཐུགས་ཡོན་ཏན་འཕྲིན་ལས་ཀྱི་རྒྱུད་ལྔ།</head><p/></div><div n="4"><head><num>2.1.3.2.3</num> རྨ་བྱ་མཇིང་བསྣོལ།</head><p/></div><div n="4"><head><num>2.1.3.2.4</num> སེམས་སྡེ་རྩ་བའི་རྒྱུད་ལྔ། ཡན་ལག་གི་རྒྱུད་དྲུག་སྟེ་བཅུ་གཅིག</head><p/></div><div n="4"><head><num>2.1.3.2.5</num> ཕ་རོལ་ཏུ་ཕྱིན་པ་དྲུག</head><p/></div><div n="4"><head><num>2.1.3.2.6</num> རིག་པ་རང་ཤར་ཆེན་པོའི་རྒྱུད་ལ་སོགས་པ་མངོན་སུམ་འོད་གསལ་གྱི་རྒྱུད་རྣམས།</head><p/></div><div n="4"><head><num>2.1.3.2.7</num> ཆོས་རགས་པ་འདུལ་བའི་རྒྱུད་བཅུ་ལ་སོགས་པ།</head><p/></div><div n="4"><head><num>2.1.3.2.8</num> འདུལ་བ་ཁྲི་ཕྲག་དཔག་ཏུ་མེད་པ།</head><p/></div><div n="4"><head><num>2.1.3.2.9</num> འཕྲ་རྒྱུད་བདུན་པ་ལ་སོགས་པ།</head><p/></div><div n="4"><head><num>2.1.3.2.10</num> ཆོས་མདོ་སྡེ་དང༌། ཀྲཱི་ཡ་དང༌། ལུང་ཨ་ནུ་ལ་སོགས་པ་ཁྲི་ཕྲག་བརྒྱད།</head><p/></div><div n="4"><head><num>2.1.3.2.11</num> ངེས་པ་དོན་གྱི་ཐེག་པ་འབའ་ཞིག</head><p/></div><div n="4"><head><num>2.1.3.2.12</num> སྡེ་སྣོད་གསུམ་ལ་སོགས་པ།</head><p/></div></div><div n="3"><head><num>2.1.3.3</num> འདི་དག་གིའང་སྐུ་གསུང་ཐུགས་མི་བཟད་པ་རྒྱན་གྱི་འཁོར་ལོའི་མཛད་པ་སུམ་ཅུ་རྩ་དྲུག</head><p/><div n="4"><head><num>2.1.3.3.1</num> སྐུ།</head><p/><div n="5"><head><num>2.1.3.3.1.1</num> སྐུའི་ཕྱིའི་མཛད་པ་བཞི།</head><p/></div><div n="5"><head><num>2.1.3.3.1.2</num> ནང་གི་བཞི།</head><p/></div><div n="5"><head><num>2.1.3.3.1.3</num> གསང་བའི་བཞི།</head><p/></div></div><div n="4"><head><num>2.1.3.3.2</num> གསུང་།</head><p/><div n="5"><head><num>2.1.3.3.2.1</num> གསུང་གི་ཕྱིའི་མཛད་པ་བཞི།</head><p/></div><div n="5"><head><num>2.1.3.3.2.2</num> ནང་གི་བཞི།</head><p/></div><div n="5"><head><num>2.1.3.3.2.3</num> གསང་བའི་བཞི།</head><p/></div></div><div n="4"><head><num>2.1.3.3.3</num> ཐུགས།</head><p/><div n="5"><head><num>2.1.3.3.3.1</num> ཐུགས་ཀྱི་ཕྱིའི་མཛད་པ་བཞི།</head><p/></div><div n="5"><head><num>2.1.3.3.3.2</num> ནང་གི་བཞི།</head><p/></div><div n="5"><head><num>2.1.3.3.3.3</num> གསང་བའི་བཞི།</head><p/></div></div></div></div><div n="2"><head><num>2.1.4</num> ལེའུ་རེ་རེའི་མཇུག་གི་སྨོན་ལམ།{}</head><p/></div></div></body></text>
 </TEI.2>

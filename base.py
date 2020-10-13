@@ -79,7 +79,7 @@ class BaseConverter:
 
     def convertpara(self, p):
         style_name = p.style.name
-        headmtch = re.match(r'^Heading (\d+)[\,\s]*(Front|Body|Back)?', style_name)
+        headmtch = re.match(r'^Heading (?:Tibetan\s*)?(\d+)[\,\s]*(Front|Body|Back)?', style_name)
         if headmtch:
             self.doheader(p, headmtch)
         else:
@@ -96,12 +96,17 @@ class BaseConverter:
         :return: none
         """
         hlevel = int(headmtch.group(1))
+        htext = p.text
+        mtch = re.match(r'^((\d+\.?)+)', htext)
+        if mtch:
+            hnum = mtch.group(1)
+            htext = htext.replace(hnum, '<num>{}</num>'.format(hnum))
         style_name = p.style.name
         if hlevel == 0:
             # If level is 0, its front body or back, create element and clear head stack
             # TODO: need to parse the p element below in case there is internal markup to put in head
             #  (i.e. don't use p.text)
-            fbbel = etree.XML('<{0}><head>{1}</head></{0}>'.format(headmtch.group(2).lower(), p.text))
+            fbbel = etree.XML('<{0}><head>{1}</head></{0}>'.format(headmtch.group(2).lower(), htext))
             self.xmlroot.find('text').append(fbbel)
             self.current_el = fbbel
             self.headstack = [fbbel]
@@ -109,12 +114,12 @@ class BaseConverter:
             # Otherwise we are already in front, body, or back, so create div
             currlevel = len(self.headstack) - 1  # subtract one bec. div 0 is at top of stack
             # TODO: need to parse the p element in case there is internal markup to put in head
-            hdiv = etree.XML('<div n="{}"><head>{}</head><p></p></div>'.format(currlevel + 1, p.text))
+            hdiv = etree.XML('<div n="{}"><head>{}</head><p></p></div>'.format(hlevel, htext))
             # if it's the next level deeper
             if hlevel > currlevel:
                 # if new level is higher than the current level just add it to current
                 if hlevel - currlevel > 1:
-                    self.mywarning("Warning: Heading level skipped for {}".format(style_name, p.text))
+                    self.mywarning("Warning: Heading level skipped for {}".format(style_name, htext))
                 self.current_el.append(hdiv)
                 self.current_el = hdiv
                 self.headstack.append(hdiv)
@@ -125,7 +130,8 @@ class BaseConverter:
                 self.headstack[-1] = hdiv
             # Otherwise it's a higher level
             else:
-                self.headstack = self.headstack[0:currlevel]  # because front, body, back is 0th element use currlevel to splice array
+                # because front, body, back is 0th element use hlevel to splice array
+                self.headstack = self.headstack[0:hlevel]
                 self.headstack[-1].append(hdiv)
                 self.headstack.append(hdiv)
                 self.current_el = hdiv
