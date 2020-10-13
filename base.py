@@ -5,7 +5,7 @@ The base object inherited by all converters
 import os
 import logging
 import re
-# from docx import Document
+import zipfile
 import docx
 from lxml import etree
 from datetime import date
@@ -18,6 +18,7 @@ class BaseConverter:
     def __init__(self, args):
         self.files = []
         self.current_file = ''
+        self.current_file_path = ''
         self.indir = args.indir
         if not os.path.isdir(self.indir):
             raise NotADirectoryError("The in path, {}, is not a directory".format(self.indir))
@@ -32,6 +33,8 @@ class BaseConverter:
         self.debug = args.debug if args.debug else False
         self.worddoc = None
         self.metatable = None
+        self.footnotes = []
+        self.endnotes = []
         self.xmlroot = None
         self.headstack = []
         self.current_el = None
@@ -66,9 +69,10 @@ class BaseConverter:
             self.writexml()
 
     def convertdoc(self):
-        wdpath = os.path.join(self.indir, self.current_file)
-        self.worddoc = docx.Document(wdpath)
+        self.current_file_path = os.path.join(self.indir, self.current_file)
+        self.worddoc = docx.Document(self.current_file_path)
         print("it has {} paragraphs".format(len(self.worddoc.paragraphs)))
+        self.processFootEndNotes()
         self.createxml()
         # TODO: add more conversion code here. Iterate through paras then runs. Using stack method
         for p in self.worddoc.paragraphs:
@@ -77,64 +81,37 @@ class BaseConverter:
             else:
                 self.mywarning("Warning: paragraph ({}) is not a docx paragraph cannot convert".format(p))
 
-    def convertpara(self, p):
-        style_name = p.style.name
-        headmtch = re.match(r'^Heading (?:Tibetan\s*)?(\d+)[\,\s]*(Front|Body|Back)?', style_name)
-        if headmtch:
-            self.doheader(p, headmtch)
-        else:
-            # TODO: fill in for regular paragraph processing
-            pass
+    def processFootEndNotes(self):
+        zipdoc = zipfile.ZipFile(self.current_file_path)
 
-    def doheader(self, p, headmtch):
-        """
-        Method to convert heading styles into structural elements either front, body, bock or divs
-        Called from convertpara() method above
+        # write content of endnotes.xml into self.footnotes[]
+        fnotestxt = zipdoc.read('word/footnotes.xml')
+        xml_fn_root = etree.fromstring(fnotestxt)
+        fnindex = 0
+        fnotes = xml_fn_root.findall('w:footnote', xml_fn_root.nsmap)
+        for f in fnotes:
+            if fnindex > 1:
+                text = f.findall('.//w:t', xml_fn_root.nsmap)
+                s = ""
+                for t in text:
+                    s += t.text
+                self.footnotes.append(s)
+            fnindex += 1
 
-        :param p: the word docx paragraph object
-        :param headmtch: the re.match object group(1) is heading level, group(2) is front, body, back if it is one of those
-        :return: none
-        """
-        hlevel = int(headmtch.group(1))
-        htext = p.text
-        mtch = re.match(r'^((\d+\.?)+)', htext)
-        if mtch:
-            hnum = mtch.group(1)
-            htext = htext.replace(hnum, '<num>{}</num>'.format(hnum))
-        style_name = p.style.name
-        if hlevel == 0:
-            # If level is 0, its front body or back, create element and clear head stack
-            # TODO: need to parse the p element below in case there is internal markup to put in head
-            #  (i.e. don't use p.text)
-            fbbel = etree.XML('<{0}><head>{1}</head></{0}>'.format(headmtch.group(2).lower(), htext))
-            self.xmlroot.find('text').append(fbbel)
-            self.current_el = fbbel
-            self.headstack = [fbbel]
-        else:
-            # Otherwise we are already in front, body, or back, so create div
-            currlevel = len(self.headstack) - 1  # subtract one bec. div 0 is at top of stack
-            # TODO: need to parse the p element in case there is internal markup to put in head
-            hdiv = etree.XML('<div n="{}"><head>{}</head><p></p></div>'.format(hlevel, htext))
-            # if it's the next level deeper
-            if hlevel > currlevel:
-                # if new level is higher than the current level just add it to current
-                if hlevel - currlevel > 1:
-                    self.mywarning("Warning: Heading level skipped for {}".format(style_name, htext))
-                self.current_el.append(hdiv)
-                self.current_el = hdiv
-                self.headstack.append(hdiv)
-            # if it's the same level as current
-            elif hlevel == currlevel:
-                self.current_el.getparent().append(hdiv)
-                self.current_el = hdiv
-                self.headstack[-1] = hdiv
-            # Otherwise it's a higher level
-            else:
-                # because front, body, back is 0th element use hlevel to splice array
-                self.headstack = self.headstack[0:hlevel]
-                self.headstack[-1].append(hdiv)
-                self.headstack.append(hdiv)
-                self.current_el = hdiv
+        # write content of endnotes.xml into self.endnotes[]
+        xml_content = zipdoc.read('word/endnotes.xml')
+        xml_en_root = etree.fromstring(xml_content)
+        enindex = 0
+        enotes = xml_en_root.findall('w:endnote', xml_en_root.nsmap)
+        for f in enotes:
+            if enindex > 1:
+                text = f.findall('.//w:t', xml_en_root.nsmap)
+                s = ""
+                for t in text:
+                    s += t.text
+                self.endnotes.append(s)
+            enindex += 1
+        zipdoc.close()
 
     def createxml(self):
         with open(os.path.join(TEMPLATE_FOLDER, self.template), 'r') as tempstream:
@@ -155,7 +132,7 @@ class BaseConverter:
         self.template which is the string read in from the XML template file indicated in the settings
 
         NOTE: This function should be overridden by particular template converters to customize
-        TODO: Create a generalized version to put here and  use this for the chris_old template
+        TODO: Create a generalized version to put here and use this for the chris_old template
         :return:
         """
         wordtable = self.metatable
@@ -207,6 +184,65 @@ class BaseConverter:
                 logging.error("Type error in iterating wordtable: {}".format(e))
 
         self.xmltemplate = re.sub(r'{([^}]+)}', r'<!--\1-->', xmltext)
+
+    def convertpara(self, p):
+        style_name = p.style.name
+        headmtch = re.match(r'^Heading (?:Tibetan\s*)?(\d+)[\,\s]*(Front|Body|Back)?', style_name)
+        if headmtch:
+            self.doheader(p, headmtch)
+        else:
+            # TODO: fill in for regular paragraph processing
+            pass
+
+    def doheader(self, p, headmtch):
+        """
+        Method to convert heading styles into structural elements either front, body, bock or divs
+        Called from convertpara() method above
+
+        :param p: the word docx paragraph object
+        :param headmtch: the re.match object group(1) is heading level, group(2) is front, body, back if it is one of those
+        :return: none
+        """
+        hlevel = int(headmtch.group(1))
+        # TODO: need to parse the p element below in case there is internal markup to put in head
+        #  (i.e. don't just use p.text but it may have children)
+        htext = p.text
+        mtch = re.match(r'^((\d+\.?)+)', htext)
+        if mtch:
+            hnum = mtch.group(1)
+            htext = htext.replace(hnum, '<num>{}</num>'.format(hnum))
+        style_name = p.style.name
+        if hlevel == 0:
+            # If level is 0, its front body or back, create element and clear head stack
+            fbbel = etree.XML('<{0}><head>{1}</head></{0}>'.format(headmtch.group(2).lower(), htext))
+            self.xmlroot.find('text').append(fbbel)
+            self.current_el = fbbel
+            self.headstack = [fbbel]
+        else:
+            # Otherwise we are already in front, body, or back, so create div
+            currlevel = len(self.headstack) - 1  # subtract one bec. div 0 is at top of stack
+            # TODO: need to parse the p element in case there is internal markup to put in head
+            hdiv = etree.XML('<div n="{}"><head>{}</head><p></p></div>'.format(hlevel, htext))
+            # if it's the next level deeper
+            if hlevel > currlevel:
+                # if new level is higher than the current level just add it to current
+                if hlevel - currlevel > 1:
+                    self.mywarning("Warning: Heading level skipped for {}".format(style_name, htext))
+                self.current_el.append(hdiv)
+                self.current_el = hdiv
+                self.headstack.append(hdiv)
+            # if it's the same level as current
+            elif hlevel == currlevel:
+                self.current_el.getparent().append(hdiv)
+                self.current_el = hdiv
+                self.headstack[-1] = hdiv
+            # Otherwise it's a higher level
+            else:
+                # because front, body, back is 0th element use hlevel to splice array
+                self.headstack = self.headstack[0:hlevel]
+                self.headstack[-1].append(hdiv)
+                self.headstack.append(hdiv)
+                self.current_el = hdiv
 
     def writexml(self):
         # Determine Name for Resulting XML file
