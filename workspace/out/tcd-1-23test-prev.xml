@@ -1,0 +1,486 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE TEI.2 SYSTEM "http://texts.thlib.org/cocoon/texts/catalogs/xtib3.dtd">
+<TEI.2>
+	<teiHeader lang="eng">
+		<fileDesc>
+			<titleStmt>
+				<title lang="tib" n="main">ཐེག་པའི་མཆོག་རིན་པོ་ཆེའི་མཛོད།</title>
+				<title lang="tib" n="cover">ཐེག་པའི་མཆོག་རིན་པོ་ཆེའི་མཛོད།</title>
+				<title lang="san" rend="script:deva"><!--Title San--></title>
+				<title lang="san" n="cover" rend="script:tib"><!--Cover Title San in Tib--></title>
+				<title lang="san" n="cover" rend="script:lanydza"
+					><!--Cover Title San in Lanydza--></title>
+				<title lang="tib" n="spine" />
+				<title lang="tib" n="margin" />
+				<author>ཀློང་ཆེན་རབ་འབྱམས་པ།</author>
+			</titleStmt>
+			<publicationStmt n="digital-file">
+				<respStmt n="creation">
+					<resp>Creator</resp>
+					<name n="agent" />
+					<date n="start" />
+					<date n="end" />
+					<name type="place"><geogName>Lhasa Input Center</geogName></name>
+				</respStmt>
+				<respStmt n="proofing">
+					<resp>Proofer</resp>
+					<name n="agent">Tsering Gyurme, and then Tibet U.</name>
+					<date n="start" />
+					<date n="end">2010</date>
+					<name type="place"><geogName /></name>
+				</respStmt>
+				<respStmt n="proofing">
+					<resp>Second Proofer</resp>
+					<name n="agent"><!--Name of Proofreader2--></name>
+					<date n="start"><!--Date Proofreading2 Began--></date>
+					<date n="end"><!--Date Proofreading2 Finished--></date>
+					<name type="place"><geogName><!--Place of Proofreading2--></geogName></name>
+				</respStmt>
+				<respStmt n="markup">
+					<resp>Markup</resp>
+					<name n="agent">Chris Hatchell</name>
+					<date n="start">2005-07-01</date>
+					<date n="end">2008-03-25</date>
+					<name type="place"><geogName>Charlottesville, VA</geogName></name>
+				</respStmt>
+				<respStmt n="markup">
+					<resp>Second Markup</resp>
+					<name n="agent"><!--Name of Markup-er2--></name>
+					<date n="start"><!--Date Markup2 Began--></date>
+					<date n="end"><!--Date Markup2 Finished--></date>
+					<name type="place"><geogName><!--Place of Markup2--></geogName></name>
+				</respStmt>
+				<respStmt n="conversion">
+					<resp>Conversion</resp>
+					<name n="agent" />
+					<date n="start" />
+					<date n="end" />
+					<name type="place"><geogName /></name>
+				</respStmt>
+				<publisher id="thdl">
+					<orgName>Tibetan &amp; Himalayan Library</orgName>
+					<address>
+						<addrLine rend="url">http://www.thlib.org/</addrLine>
+					</address>
+				</publisher>
+				<pubPlace>
+					<orgName type="university">University of Virginia</orgName>
+					<placeName>
+						<settlement type="city">Charlottesville</settlement>
+						<region type="state">Virginia</region>
+						<num type="zipcode">22904</num>
+					</placeName>
+				</pubPlace>
+				<date>2020-10-13</date>
+			</publicationStmt>
+			<sourceDesc>
+				<!-- Cover page full contents -->
+				<p n="cover-page" lang="tib">ཐེག་པའི་མཆོག་རིན་པོ་ཆེའི་མཛོད་བཞུགས་སྷོ།།
+					ས་དྷུ་དྲི་ཤྱ་ཧོ།། དགེའོ།།</p>
+				<!--The Bibliographic Information of the Original Text or Journal if from a print publication-->
+				<biblFull n="original">
+					<titleStmt n="collection">
+						<title lang="tib">མཛོད་བདུན།</title>
+					</titleStmt>
+					<extent>
+						<num n="vol">1 <rs type="vol-letter" lang="tib"
+							><!--Volume Letter--></rs></num>
+						<num type="page-range" />
+						<num type="total-pages">1-697, 1-601 (chapters 1-25)</num>
+					</extent>
+					<publicationStmt>
+						<publisher>a ’dzom chos sgar</publisher>
+						<pubPlace>dkar mdzes bod rigs rang skyong khul, dpal yul rdzong, a 'dzom chos sgar</pubPlace>
+						<date />
+						<idno type="isbn" />
+						<idno type="call-number" />
+						<idno type="other" />
+					</publicationStmt>
+				</biblFull>
+				<p n="problems">See JIRA</p>
+			</sourceDesc>
+		</fileDesc>
+		<profileDesc>
+			<langUsage>
+				<language id="ara">Arabic</language>
+				<language id="bur">Burmese</language>
+				<language id="chi">Chinese</language>
+				<language id="dzo">Dzongkha</language>
+				<language id="eng">English</language>
+				<language id="fre">French</language>
+				<language id="ger">German</language>
+				<language id="hin">Hindi</language>
+				<language id="ind">Indonesian</language>
+				<language id="ita">Italian</language>
+				<language id="jpn">Japanese</language>
+				<language id="kor">Korean</language>
+				<language id="lao">Lao</language>
+				<language id="lat">Latin</language>
+				<language id="mal">Malayalam</language>
+				<language id="mnc">Manchu</language>
+				<language id="mon">Mongolian</language>
+				<language id="nxq">Naxi</language>
+				<language id="nep">Nepali</language>
+				<language id="non-tib">Non-Tibetan Language</language>
+				<language id="pli">Pali</language>
+				<language id="pan">Panjabi</language>
+				<language id="per">Persian</language>
+				<language id="pol">Polish</language>
+				<language id="rus">Russian</language>
+				<language id="san">Sanskrit</language>
+				<language id="sin">Sinhala</language>
+				<language id="spa">Spanish</language>
+				<language id="tam">Tamil</language>
+				<language id="tel">Telugu</language>
+				<language id="tha">Thai</language>
+				<language id="tib">Tibetan</language>
+				<language id="tur">Turkish</language>
+				<language id="urd">Urdu</language>
+				<language id="vie">Vietnamese</language>
+			</langUsage>
+		</profileDesc>
+	</teiHeader>
+	<text>
+		<front>
+			<head><num>1</num> ཀླད།</head>
+			<div n="1">
+				<head><num>1.1</num> མཚན་བྱང་།</head>
+				<p />
+			</div>
+			<div n="1">
+				<head><num>1.2</num> མཚན།</head>
+				<p />
+			</div>
+			<div n="1">
+				<head><num>1.3</num> རྩོམ་པ་པོའི་ཕྱག་འཚལ།</head>
+				<p />
+			</div>
+			<div n="1">
+				<head><num>1.4</num> མཆོད་བརྗོད།</head>
+				<p />
+			</div>
+			<div n="1">
+				<head><num>1.5</num> རྩོམ་པར་དམ་བཅའ་བ།</head>
+				<p />
+			</div>
+			<div n="1">
+				<head><num>1.6</num> མགོ་བརྗོད།</head>
+				<p>Sapien tempus eius metus veniam ipsa cumque nisi eveniet? <milestone unit="page" ed="Dg" n="1"/>Mollis, aliqua animi
+					fermentum hendrerit eu et doloremque feugiat dignissim eum fugiat aenean donec
+					excepturi! Placerat recusandae impedit sint sapiente cum? Semper cursus ut
+					inventore! Nibh. Aliquet dignissim? Adipisicing scelerisque curabitur doloremque <s></s>
+					inventore vestibulum? Facilisis nam, earum fuga sapien. Laborum fugiat risus
+					elit, nec, porta, ducimus autem arcu quisquam dolorum lectus justo exercitation
+					dictum sit ante. Nihil? Congue ullamcorper, nostrud volutpat iusto nulla
+					convallis irure! Senectus, ultricies quod veritatis dui quas! Maxime a purus
+					aliquam doloremque. Debitis quas duis? Vero bibendum autem, augue atque
+					distinctio senectus ipsa! Per ligula elementum rutrum.</p>
+
+				<p>Earum cum convallis mi tempora quaerat vero tenetur harum cupidatat vitae?
+					Euismod, etiam! Dicta! Gravida! Excepteur, earum accusamus! Cupiditate veritatis
+					fringilla! Quibusdam platea lacinia mattis ipsam! Augue, dignissim mollitia sunt
+					felis tenetur repellat dictumst, dicta blanditiis, mollitia sociosqu illum
+					sapiente veniam sequi proin pharetra laboriosam voluptatum fermentum cursus eu
+					aliquip sequi quos, feugiat esse earum, maecenas primis aliquet sagittis
+					potenti, lectus bibendum quia fusce, nibh maecenas rhoncus ac ullam corrupti,
+					laboris fuga? Varius volutpat fugiat dui ultricies! Sapien earum eros
+					exercitationem! Et sapien eos elementum dui expedita eu sed id eros aute ipsum
+					augue quas incidunt sit lacus dapibus? Eleifend.</p>
+
+				<p>Nulla modi voluptatum rhoncus assumenda illum iure pede, perspiciatis. Aliquet
+					illo, nonummy? Tincidunt ipsam? Parturient gravida accusantium nec. Nisi,
+					cursus, suspendisse gravida eum semper. Irure? Mauris tempora at rutrum class.
+					Curabitur eius? Mus eos tristique ullam, corporis malesuada, eleifend, iaculis?
+					Aliquip pharetra! Eos sociosqu fugit. Varius in ullam, vitae quisque. Dolorem
+					assumenda eos placerat? Adipisicing massa, commodi, ornare non deserunt fugit
+					lobortis, ducimus ab, voluptas, ac nascetur accusantium dicta aliquid quod
+					dignissimos. Ut netus hendrerit nisi ab netus, aperiam vivamus molestiae elit
+					voluptates mollit, metus deserunt suspendisse, at! Dictum suspendisse! Donec
+					accumsan! Torquent mollitia pellentesque parturient, curabitur harum. Unde
+					ultrices.</p>
+
+				<p>Semper, iste, fermentum? Laborum! Deserunt? Deleniti aperiam, eleifend sint eget
+					sapien, quidem voluptates. Duis hymenaeos? Eros rutrum bibendum elementum
+					repellendus magnis, odit quasi repellat? Odio? Aliquip auctor faucibus? Dictumst
+					dignissim, sapien netus, fringilla ipsum distinctio phasellus curae, architecto
+					duis, quas harum magnam? Augue odio turpis, iaculis semper eveniet. Porta,
+					faucibus necessitatibus eiusmod magnis illum malesuada nobis! Exercitation,
+					netus. Corrupti dolor a eius potenti repellat eius, laboris voluptate at sit
+					sagittis earum fusce! Dolor netus porta culpa duis lobortis voluptate cras
+					delectus! Ex porttitor? Nibh, voluptatem. Alias facilisi praesentium inventore
+					elit, perferendis ultrices modi pellentesque proident dolorem, semper dolore,
+					porro. Quis.</p>
+
+				<p>Vulputate lacus voluptates rem, commodi sed feugiat rem rhoncus platea vero
+					error! Tortor ridiculus. Parturient viverra? Inventore nascetur, eiusmod
+					fringilla inceptos! Ab ad molestiae? Aliqua eu, molestie officia quos curabitur,
+					proident laboriosam irure fugiat pede morbi mauris lorem eius, temporibus?
+					Repudiandae blandit cum excepturi! Cum? Est orci alias. Sodales morbi. Hac
+					phasellus vivamus modi. Risus torquent! Anim eius. Magnam malesuada? Fames quo
+					libero, assumenda ullam earum quos montes occaecat ut, ullamcorper quis, aperiam
+					saepe praesent ratione vulputate at, mollit unde earum tortor viverra tellus?
+					Netus amet numquam beatae magnam vehicula inventore libero! Cupidatat ipsa
+					delectus incididunt dictumst curabitur ipsa, pulvinar.</p>
+			</div>
+		</front>
+		<body>
+			<head><num>2</num> གཞུང་།</head>
+			<div n="1">
+				<head><num>2.1</num> བྱུང་ཚུལ་གཏན་ལ་དབབ་པ་སྟེ་རིམ་ཁང་དང་པོ།</head>
+				<p />
+				<div n="2">
+					<head><num>2.1.1</num>
+						གདོད་མའི་མགོན་པོ་མངོན་པར་བྱང་ཆུབ་ནས་ཞིང་ཁམས་ཇི་ལྟར་བཀོད་པའི་ཚུལ་རྒྱ་མཚོ།</head>
+					<p />
+					<div n="3">
+						<head><num>2.1.1.1</num> གཞི་སྣང་དུ་ཤར་བའི་རྩལ་</head>
+						<p />
+						<div n="4">
+							<head><num>2.1.1.1.1</num> སྤྲུལ་པའི་སངས་རྒྱས་</head>
+							<p />
+							<div n="5">
+								<head><num>2.1.1.1.1.1</num> དྲང་སྲོང་མངོན་པར་ཤེས་པ་</head>
+								<p />
+							</div>
+						</div>
+					</div>
+				</div>
+				<div n="2">
+					<head><num>2.1.2</num>
+						ཞིང་འདིར་རྡོ་རྗེ་འཆང་གི་རྣམ་པར་འཕྲུལ་པས་ཞི་བ་བརྙེས་པའི་ཚུལ།</head>
+					<p />
+					<div n="3">
+						<head><num>2.1.2.1</num>
+							སྐུ་གསུང་ཐུགས་མི་ཟད་པ་རྒྱན་གྱི་འཁོར་ལོའི་མཛད་པ་སུམ་ཅུ་རྩ་དྲུག</head>
+						<p />
+						<div n="4">
+							<head><num>2.1.2.1.1</num> སྐུ།</head>
+							<p />
+							<div n="5">
+								<head><num>2.1.2.1.1.1</num> སྐུའི་ཕྱིའི་མཛད་པ་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.2.1.1.2</num> ནང་གི་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.2.1.1.3</num> གསང་བའི་བཞི།</head>
+								<p />
+							</div>
+						</div>
+						<div n="4">
+							<head><num>2.1.2.1.2</num> གསུང་།</head>
+							<p />
+							<div n="5">
+								<head><num>2.1.2.1.2.1</num> གསུང་གི་ཕྱིའི་མཛད་པ་བཞི</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.2.1.2.2</num> ནང་གི་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.2.1.2.3</num> གསང་བའི་བཞི།</head>
+								<p />
+							</div>
+						</div>
+						<div n="4">
+							<head><num>2.1.2.1.3</num> ཐུགས།</head>
+							<p />
+							<div n="5">
+								<head><num>2.1.2.1.3.1</num> ཐུགས་ཀྱི་ཕྱིའི་མཛད་པ་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.2.1.3.2</num> ནང་གི་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.2.1.3.3</num> གསང་བའི་བཞི།</head>
+								<p />
+							</div>
+						</div>
+					</div>
+					<div n="3">
+						<head><num>2.1.2.2</num>
+							ལོངས་སྤྱོད་རྫོགས་པ་སྐུའི་སྐུ་གསུང་ཐུགས་མི་བཟད་པ་རྒྱན་གྱི་འཁོར་ལོའི་མཛད་པ་སུམ་ཅུ་རྩ་དྲུག་ཏུ་རང་ཤར་བ།</head>
+						<p />
+						<div n="4">
+							<head><num>2.1.2.2.1</num> སྐུ།</head>
+							<p />
+							<div n="5">
+								<head><num>2.1.2.2.1.1</num> སྐུའི་ཕྱིའི་མཛད་པ་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.2.2.1.2</num> ནང་གི་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.2.2.1.3</num> གསང་བའི་བཞི།</head>
+								<p />
+							</div>
+						</div>
+						<div n="4">
+							<head><num>2.1.2.2.2</num> གསུང་།</head>
+							<p />
+							<div n="5">
+								<head><num>2.1.2.2.2.1</num> གསུང་གི་ཕྱིའི་མཛད་པ་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.2.2.2.2</num> ནང་གི་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.2.2.2.3</num> གསང་བའི་བཞི།</head>
+								<p />
+							</div>
+						</div>
+						<div n="4">
+							<head><num>2.1.2.2.3</num> ཐུགས།</head>
+							<p />
+							<div n="5">
+								<head><num>2.1.2.2.3.1</num> ཐུགས་ཀྱི་ཕྱིའི་མཛད་པ་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.2.2.3.2</num> ནང་གི་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.2.2.3.3</num> གསང་བའི་བཞི།</head>
+								<p />
+							</div>
+						</div>
+					</div>
+				</div>
+				<div n="2">
+					<head><num>2.1.3</num>
+						སྤྲུལ་པའི་སྐུ་སྤྲོས་པས་ཆོས་ཀྱི་འཁོར་ལོ་བསྐོར་བའི་ཚུལ།</head>
+					<p />
+					<div n="3">
+						<head><num>2.1.3.1</num>
+							སྤྲུལ་པ་ཆེན་པོ་གསུམ་སྣང་བས་འགྲོ་བ་ལ་ཕན་པ་མཛད་པ།</head>
+						<p />
+					</div>
+					<div n="3">
+						<head><num>2.1.3.2</num>
+							གནས་རིས་བཅུ་གཉིས་སུ་སྤྲུལ་སྐུ་བཅུ་གཉིས་བྱོན་པའི་ཚུལ།</head>
+						<p />
+						<div n="4">
+							<head><num>2.1.3.2.1</num> སྒྲ་ཐལ་འགྱུར་གྱི་རྒྱུད།</head>
+							<p />
+						</div>
+						<div n="4">
+							<head><num>2.1.3.2.2</num>
+								སྐུ་གསུང་ཐུགས་ཡོན་ཏན་འཕྲིན་ལས་ཀྱི་རྒྱུད་ལྔ།</head>
+							<p />
+						</div>
+						<div n="4">
+							<head><num>2.1.3.2.3</num> རྨ་བྱ་མཇིང་བསྣོལ།</head>
+							<p />
+						</div>
+						<div n="4">
+							<head><num>2.1.3.2.4</num>
+								སེམས་སྡེ་རྩ་བའི་རྒྱུད་ལྔ། ཡན་ལག་གི་རྒྱུད་དྲུག་སྟེ་བཅུ་གཅིག</head>
+							<p />
+						</div>
+						<div n="4">
+							<head><num>2.1.3.2.5</num> ཕ་རོལ་ཏུ་ཕྱིན་པ་དྲུག</head>
+							<p />
+						</div>
+						<div n="4">
+							<head><num>2.1.3.2.6</num>
+								རིག་པ་རང་ཤར་ཆེན་པོའི་རྒྱུད་ལ་སོགས་པ་མངོན་སུམ་འོད་གསལ་གྱི་རྒྱུད་རྣམས།</head>
+							<p />
+						</div>
+						<div n="4">
+							<head><num>2.1.3.2.7</num> ཆོས་རགས་པ་འདུལ་བའི་རྒྱུད་བཅུ་ལ་སོགས་པ།</head>
+							<p />
+						</div>
+						<div n="4">
+							<head><num>2.1.3.2.8</num> འདུལ་བ་ཁྲི་ཕྲག་དཔག་ཏུ་མེད་པ།</head>
+							<p />
+						</div>
+						<div n="4">
+							<head><num>2.1.3.2.9</num> འཕྲ་རྒྱུད་བདུན་པ་ལ་སོགས་པ།</head>
+							<p />
+						</div>
+						<div n="4">
+							<head><num>2.1.3.2.10</num>
+								ཆོས་མདོ་སྡེ་དང༌། ཀྲཱི་ཡ་དང༌། ལུང་ཨ་ནུ་ལ་སོགས་པ་ཁྲི་ཕྲག་བརྒྱད།</head>
+							<p />
+						</div>
+						<div n="4">
+							<head><num>2.1.3.2.11</num> ངེས་པ་དོན་གྱི་ཐེག་པ་འབའ་ཞིག</head>
+							<p />
+						</div>
+						<div n="4">
+							<head><num>2.1.3.2.12</num> སྡེ་སྣོད་གསུམ་ལ་སོགས་པ།</head>
+							<p />
+						</div>
+					</div>
+					<div n="3">
+						<head><num>2.1.3.3</num>
+							འདི་དག་གིའང་སྐུ་གསུང་ཐུགས་མི་བཟད་པ་རྒྱན་གྱི་འཁོར་ལོའི་མཛད་པ་སུམ་ཅུ་རྩ་དྲུག</head>
+						<p />
+						<div n="4">
+							<head><num>2.1.3.3.1</num> སྐུ།</head>
+							<p />
+							<div n="5">
+								<head><num>2.1.3.3.1.1</num> སྐུའི་ཕྱིའི་མཛད་པ་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.3.3.1.2</num> ནང་གི་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.3.3.1.3</num> གསང་བའི་བཞི།</head>
+								<p />
+							</div>
+						</div>
+						<div n="4">
+							<head><num>2.1.3.3.2</num> གསུང་།</head>
+							<p />
+							<div n="5">
+								<head><num>2.1.3.3.2.1</num> གསུང་གི་ཕྱིའི་མཛད་པ་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.3.3.2.2</num> ནང་གི་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.3.3.2.3</num> གསང་བའི་བཞི།</head>
+								<p />
+							</div>
+						</div>
+						<div n="4">
+							<head><num>2.1.3.3.3</num> ཐུགས།</head>
+							<p />
+							<div n="5">
+								<head><num>2.1.3.3.3.1</num> ཐུགས་ཀྱི་ཕྱིའི་མཛད་པ་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.3.3.3.2</num> ནང་གི་བཞི།</head>
+								<p />
+							</div>
+							<div n="5">
+								<head><num>2.1.3.3.3.3</num> གསང་བའི་བཞི།</head>
+								<p />
+							</div>
+						</div>
+					</div>
+				</div>
+				<div n="2">
+					<head><num>2.1.4</num> ལེའུ་རེ་རེའི་མཇུག་གི་སྨོན་ལམ།{}</head>
+					<p />
+				</div>
+			</div>
+		</body>
+	</text>
+</TEI.2>

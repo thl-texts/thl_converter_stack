@@ -475,6 +475,25 @@ elements = {
 }
 
 
+def getStyleElement(style_name):
+    '''
+    Returns the XML element object for a particular style name
+    :param style_name:
+    :return:
+    '''
+    elemdef = getStyleTagDef(style_name)
+    if elemdef is None:
+        print("Character style name {} was not found.".format(style_name))
+        return etree.XML('<s n="{}"></s>'.format(style_name))
+    elem = etree.Element(elemdef['tag'])
+    if 'attributes' in elemdef:
+        atts = elemdef['attributes']
+        if isinstance(atts, dict):
+            for nm, val in atts.items():
+                elem.set(nm, val)
+    return elem
+
+
 def getStyleTagDef(style_name):
     '''
     Returns the definition of the tag as a python dictionary with "tag" and "attributes" keys

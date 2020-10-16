@@ -1,7 +1,7 @@
 #!env/bin/python
 
 import argparse
-from base import BaseConverter
+from textconverter import TextConverter
 
 
 def main():
@@ -30,11 +30,11 @@ def main():
     parser.add_argument('-d', '--debug',
                         action="store_true",
                         help='Whether to debug')
-    args = parser.parse_args()
 
-    converter = BaseConverter(args)
-    print(converter)
+    args = parser.parse_args()
+    converter = TextConverter(args)
     converter.convert()
+
     print("***********************************")
 
 
