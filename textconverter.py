@@ -272,16 +272,16 @@ class TextConverter:
             self.do_list(p)
 
         elif "Verse" in style_name:
-            self.do_verse(p)
+            self.do_verse(p)  # Note this does verse citation and verse speech as well
 
         elif "Citation" in style_name:
-            self.do_citation(p)
+            self.do_citation(p)  # Note verse citation is done above in do_verse()
 
         elif "Section" in style_name:
             self.do_section(p)
 
         elif "Speech" in style_name:
-            self.do_speech(p)
+            self.do_speech(p)  # verse speech is done in do_verse()
 
         else:
             if not self.is_reg_p(style_name):
@@ -321,7 +321,7 @@ class TextConverter:
             # Otherwise we are already in front, body, or back, so create div
             currlevel = len(self.headstack) - 1  # subtract one bec. div 0 is at top of stack
             # TODO: need to parse the p element in case there is internal markup to put in head
-            hdiv = etree.XML('<div n="{}"><head>{}</head><p></p></div>'.format(hlevel, htext))
+            hdiv = etree.XML('<div n="{}"><head>{}</head></div>'.format(hlevel, htext))
             # if it's the next level deeper
             if hlevel > currlevel:
                 # if new level is higher than the current level just add it to current
@@ -404,26 +404,64 @@ class TextConverter:
 
     def do_verse(self, p):
         my_style = p.style.name
-        prev_style = self.get_previous_p(True)
+        prev_style = self.get_previous_p(True)  # TODO: Check if current style is same (except number) with previous
+        is_cite = True if 'citation' in my_style.lower() else False
+        is_speech = True if 'speech' in my_style.lower() else False
+        is_nested = True if 'nested' in my_style.lower() else False
+        is_same = True if my_style.lower().replace('2', '1') == prev_style.lower().replace('2', '1') else False
+        level = 2 if '2' in my_style else 1
+        if level == 2:
+            myel = etree.Element('l')
+            self.current_el.addnext(myel)
+            self.current_el = myel
+
+        elif is_cite:
+            if is_same:
+                markup = etree.XML('<lg><l></l></lg>')
+                self.current_el.getparent().addnext(markup)
+                self.current_el = markup.find('l')
+            else:
+                markup = etree.XML('<quote><lg><l></l></lg></quote>')
+                if is_nested:
+                    self.current_el.append(markup)
+                else:
+                    self.headstack[-1].append(markup)
+                self.current_el = markup.find('lg').find('l')
+
+        elif is_nested:
+            markup = etree.XML('<lg><l></l></lg>')
+            self.current_el.append(markup)
+            self.current_el = markup.find('l')
+
+        else:
+            if is_speech:
+                markup = etree.XML('<q><lg><l></l></lg></q>')
+                self.current_el = markup.find('lg').find('l')
+            else:
+                markup = etree.XML('<lg><l></l></lg>')
+                self.current_el = markup.find('l')
+            self.headstack[-1].append(markup)
+
+    def do_citation(self, p):
         vrs_el = etree.Element('p')
         self.current_el.addnext(vrs_el)
         self.current_el = vrs_el
 
-    def do_citation(self, p):
-        self.do_verse(p)
-
     def do_section(self, p):
-        self.do_verse(p)
+        vrs_el = etree.Element('p')
+        self.current_el.addnext(vrs_el)
+        self.current_el = vrs_el
 
     def do_speech(self, p):
-        self.do_verse(p)
+        vrs_el = etree.Element('p')
+        self.current_el.addnext(vrs_el)
+        self.current_el = vrs_el
 
     def do_paragraph(self, p):
         if p.text.strip() == '':
             return
-        my_style = p.style.name
-        prev_style = self.get_previous_p(True)
         p_el = etree.Element('p')
+        # TODO: Shouldn't we just append to last element in headstack? What happens after embedded lists?
         if self.current_el.tag == 'div':
             self.current_el.append(p_el)
         else:
@@ -499,6 +537,8 @@ class TextConverter:
         # End of interating runs
 
         # Copy temp_el contents to current_el depending on whether it has children or not
+        if self.current_el is None:
+            print('its none')
         curr_child = self.current_el.getchildren() or []
         if len(curr_child) > 0:
             curr_child[-1].tail = temp_el.text
