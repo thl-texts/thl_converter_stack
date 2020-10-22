@@ -8,6 +8,7 @@ import re
 import zipfile
 import docx
 from lxml import etree
+
 from datetime import date
 from styleelements import getStyleElement
 
@@ -40,6 +41,7 @@ class TextConverter:
         self.headstack = []
         self.current_el = None
         self.pindex = -1
+        self.edsig = ''
 
         self.log = args.log
         self.loglevel = logging.DEBUG if self.debug else logging.WARN
@@ -139,24 +141,32 @@ class TextConverter:
             if fnindex > 1:  # The first two "footnotes" are the separation and continuation lines
                 text = f.findall('.//w:t', xml_fn_root.nsmap)
                 s = ""
+                plains = ""
                 wdschema = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
                 for t in text:
                     ttxt = t.text
+                    plains += ttxt
                     prev = t.getprevious()  # This returns <w:rPr> or None
                     if prev is not None:
                         tsty = []
+                        lang = ""
                         for pc in prev.getchildren():
                             pcstyle = re.sub(r'\{[^\}]+\}', '', pc.tag)
                             if pcstyle == 'rStyle':
                                 if pc.get(wdschema + 'val') == 'X-EmphasisStrong':
                                     tsty.append('strong')
-                            if pcstyle == 'i':
+                            elif pcstyle == 'i':
                                 tsty.append('weak')
-                            if pcstyle == 'u':
+                            elif pcstyle == 'u':
                                 tsty.append('underline')
-                        ttxt = '<hi rend="{}">{}</hi>'.format(' '.join(tsty), ttxt)
+                            elif pcstyle == 'lang':
+                                if pc.get(wdschema + 'bidi') == 'bo-CN':
+                                    lang = ' lang="tib"'
+                        attr = "" if len(tsty) == 0 else ' rend="{}"'.format(' '.join(tsty))
+                        attr += lang
+                        ttxt = '<hi{}>{}</hi>'.format(attr, ttxt)
                     s += ttxt
-                note_el = etree.XML('<note type="footnote">{}</note>'.format(s))
+                note_el = etree.XML('<note type="footnote">{}<rs>{}</rs></note>'.format(s, plains))
                 self.footnotes.append(note_el)
             fnindex += 1
 
@@ -254,6 +264,8 @@ class TextConverter:
                 label = label.replace('Call་number', 'Call-number')
                 srclbl = "{" + label + "}"
                 xmltext = xmltext.replace(srclbl, rowval)
+                if label.lower() == 'edition sigla':
+                    self.edsig = rowval
 
             except IndexError as e:
                 logging.error("Index error in iterating wordtable: {}".format(e))
@@ -443,6 +455,7 @@ class TextConverter:
             self.headstack[-1].append(markup)
 
     def do_citation(self, p):
+        # Citations not already done in verse
         vrs_el = etree.Element('p')
         self.current_el.addnext(vrs_el)
         self.current_el = vrs_el
@@ -453,6 +466,7 @@ class TextConverter:
         self.current_el = vrs_el
 
     def do_speech(self, p):
+        #  Note this is speech not already covered in verse or citation. See convertpara() method above
         vrs_el = etree.Element('p')
         self.current_el.addnext(vrs_el)
         self.current_el = vrs_el
@@ -505,11 +519,34 @@ class TextConverter:
                 else:
                     elem.tail += rtxt
             # Footnotes
-            # elif "footnote" in char_style.lower() or "endnote" in char_style.lower():
-            #     # print("Doing note Style: {}".format(char_style))
-            #     note_el = self.do_footendnotes(run, elem, temp_el)
-            #     if note_el:
-            #         elem = note_el
+            elif "footnote" in char_style.lower() or "endnote" in char_style.lower():
+                # logging.warning("!!! Must deal with critical edition notes !!!")
+                note = self.endnotes.pop(0) if "endnote" in char_style.lower() else self.footnotes.pop(0)
+                if elem is None and len(temp_el.getchildren()) > 0:
+                    elem = temp_el.getchildren()[-1]
+                if elem is not None:
+                    back_text = elem.tail if elem.tail and len(elem.tail) > 0 else elem.text
+                else:
+                    back_text = temp_el.text
+                reading = self.process_critical(note, back_text)
+                if not reading:
+                    rs = note.find('rs')
+                    if isinstance(rs, etree._Element):
+                        note.remove(rs)
+                    temp_el.append(note)
+                    elem = note
+                elif isinstance(elem, etree._Element):
+                    if elem.tag != 'milestone' and (elem.tail is None or len(elem.tail) == 0):
+                        elem.text = reading['backtext']
+                        elem.append(reading['app'])
+                    else:
+                        elem.tail = reading['backtext']
+                        temp_el.append(reading['app'])
+                        elem = reading['app']
+                else:
+                    temp_el.text = reading['backtext']
+                    temp_el.append(reading['app'])
+                    elem = reading['app']
 
             # Milestones
             elif "Page Number" in char_style or "Line Number" in char_style:
@@ -528,7 +565,7 @@ class TextConverter:
                 logging.debug('Style element {} => {}'.format(char_style, new_el.tag))
                 new_el.text = rtxt
                 temp_el.append(new_el)
-                elem = new_el
+                elem = temp_el.getchildren()[-1]
 
             else:
                 elem.text += rtxt
@@ -538,7 +575,7 @@ class TextConverter:
 
         # Copy temp_el contents to current_el depending on whether it has children or not
         if self.current_el is None:
-            print('its none')
+            print('current el is none')
         curr_child = self.current_el.getchildren() or []
         if len(curr_child) > 0:
             curr_child[-1].tail = temp_el.text
@@ -547,17 +584,62 @@ class TextConverter:
         for tempchild in temp_el.getchildren():
             self.current_el.append(tempchild)
 
-    def do_footendnotes(self, run, elem, para_el):
-        # self.mywarning("TODO: Deal with critical edition notes!!!!")
-        if "endnote" in run.style.name.lower():
-            note = self.endnotes.pop(0)
-        else:
-            note = self.footnotes.pop(0)
+    def process_critical(self, note, bcktxt):
+        reading = False
+        if len(bcktxt) > 0:
+            if bcktxt[-1] == '}':
+                cestind = bcktxt.rfind('{')
+                if cestind > -1:
+                    reading = {}
+                    lem = bcktxt[cestind + 1:len(bcktxt) - 1].strip()
+                    variants = []
+                    reading['backtext'] = bcktxt[0:cestind]
+                    notepts = note.find('rs').text.split(';')
+                    for rdg in notepts:
+                        eds = []
+                        pref = True if '*' in rdg else False
+                        rdg = rdg.strip(' *')
+                        rpts = rdg.split(':')
+                        tempeds = [ed.strip() for ed in rpts[0].split(',')]
+                        for ed in tempeds:
+                            epts = ed.replace(')', '').split('(')
+                            edobj = {'sigla': epts[0]}
+                            if len(epts) > 1:
+                                edobj['page'] = epts[1]
+                            eds.append(edobj)
+                        rdgtxt = rpts[1] if len(rpts) > 1 else False
+                        variants.append({
+                            'pref': pref,
+                            'eds': eds,
+                            'txt': rdgtxt.strip() if rdgtxt else ''
+                        })
 
-        if elem is not None:
-            elem.append(note)
-        else:
-            para_el.append(note)
+                    app = '<app><lem wit="{}">{}</lem>'.format(self.edsig, lem)
+                    for vrnt in variants:
+                        natt = ''
+                        edsigs = [ed['sigla'] for ed in vrnt['eds']]
+                        edsig = ' '.join(edsigs)
+                        edpgs = [ed['page'] if 'page' in ed.keys() else '' for ed in vrnt['eds']]
+                        edpgs = ' '.join(edpgs)
+                        edpgs = edpgs.strip(' ')
+                        if len(edpgs) > 0:
+                            natt = ' n="{}"'.format(edpgs)
+                        if vrnt['pref']:
+                            natt += ' rend="pref"'
+                        vartxt = lem if vrnt['txt'] == '' else vrnt['txt']
+                        if 'omit' in vartxt:
+                            app += '<rdg wit="{}"{} />'.format(edsig, natt)
+                        else:
+                            app += '<rdg wit="{}"{}>{}</rdg>'.format(edsig, natt, vartxt)
+                    app += '</app>'
+                    reading['app'] = etree.XML(app)
+                else:
+                    self.mywarning("Footnote follows close brace as for apparatus, but no preceding open brace " +
+                                    "found: {}".format(bcktxt))
+                    logging.warning('Need to deal with multi paragraph apparatus')
+        return reading
+
+
 
     @staticmethod
     def createmilestone(char_style, mstxt):
@@ -565,14 +647,19 @@ class TextConverter:
         msnum = mstxt.replace('[', '').replace(']', '')   # Default backup num if regex doesn't match
         mtch = re.match(r'\[?(Page|Line)\s+([^\]]+)\]?', mstxt, re.IGNORECASE)
         if mtch:
-            mstype = mtch.group(1).replace('[', '').replace(']', '')
-            msnum = mtch.group(2).replace('[', '').replace(']', '')
-        else:
-            logging.warning("No match for milestone parts in {}".format(mstxt))
+            mstype = mtch.group(1)
+            msnum = mtch.group(2)
+        else:  # In TCD some formatting weirdness in page milestones read as: [21-page Dg]
+            mtch = re.match(r'\[?(\d)+\-page\s+([^\]]+)\]?', mstxt, re.IGNORECASE)
+            if mtch:
+                mstype = 'page'
+                msnum = mtch.group(2) + '-' + mtch.group(1)
+            else:
+                logging.warning("No match for milestone parts in {}".format(mstxt))
         msel = getStyleElement(char_style)
         msel.set('unit', mstype)
         sep = '.' if '.' in msnum else '-'  # Do we need to check for more separators
-        pts = msnum.split(sep)
+        pts     = msnum.split(sep)
         if len(pts) > 1:
             msel.set('ed', pts[0])
             msel.set('n', pts[1])
@@ -594,7 +681,6 @@ class TextConverter:
                 self.current_el = hdr
             else:
                 self.current_el = children[-1]
-
 
     def writexml(self):
         # Determine Name for Resulting XML file
