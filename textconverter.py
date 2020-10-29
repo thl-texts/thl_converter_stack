@@ -317,17 +317,10 @@ class TextConverter:
         :return: none
         """
         hlevel = int(headmtch.group(1))
-        # TODO: need to parse the p element below in case there is internal markup to put in head
-        #  (i.e. don't just use p.text but it may have children)
-        htext = p.text
-        mtch = re.match(r'^((\d+\.?)+)', htext)
-        if mtch:
-            hnum = mtch.group(1)
-            htext = htext.replace(hnum, '<num>{}</num>'.format(hnum))
         style_name = p.style.name
         if hlevel == 0:
             # If level is 0, its front body or back, create element and clear head stack
-            fbbel = etree.XML('<{0}><head>{1}</head></{0}>'.format(headmtch.group(2).lower(), htext))
+            fbbel = etree.XML('<{0}><head></head></{0}>'.format(headmtch.group(2).lower()))
             self.xmlroot.find('text').append(fbbel)
             self.current_el = fbbel.find('head')
             self.headstack = [fbbel]
@@ -335,7 +328,7 @@ class TextConverter:
             # Otherwise we are already in front, body, or back, so create div
             currlevel = len(self.headstack) - 1  # subtract one bec. div 0 is at top of stack
             # TODO: need to parse the p element in case there is internal markup to put in head
-            hdiv = etree.XML('<div n="{}"><head>{}</head></div>'.format(hlevel, htext))
+            hdiv = etree.XML('<div n="{}"><head></head></div>'.format(hlevel))
             # if it's the next level deeper
             if hlevel > currlevel:
                 # if new level is higher than the current level just add it to current
@@ -519,9 +512,38 @@ class TextConverter:
 
     def do_speech(self, p):
         #  Note this is speech not already covered in verse or citation. See convertpara() method above
-        vrs_el = etree.Element('p')
-        self.current_el.addnext(vrs_el)
-        self.current_el = vrs_el
+        my_style = p.style.name.lower()
+        prev_style = self.get_previous_p(True)
+        iscont = True if "continued" in my_style else False
+        isnested = True if "nested" in my_style else False
+        speech_el = etree.XML('<q><p></p></q>')  # use for new nested or new not nested
+        if iscont:
+            # iscontinued whether nested or not
+            speech_el = etree.XML('<p rend="cont"></p>')
+            if "nested" in prev_style and "nested" not in my_style:
+                self.current_el.getparent().addnext(speech_el)
+            else:
+                self.current_el.addnext(speech_el)
+            self.current_el = speech_el
+
+        elif isnested:
+            # initial nested speech, then the current el is a <p> within a <q> and another <q> after it
+            self.current_el.addnext(speech_el)
+            self.current_el = speech_el.find('p')
+
+        else:
+            # Regular "Speech Paragraph" style
+            # Get out from within verse
+            if self.current_el.tag == 'l':
+                lgs = [lg for lg in self.current_el.iterancestors('lg')]
+                self.current_el = lgs[-1] if len(lgs) > 0 else self.current_el.getparent()
+            # Get out from within list
+            if self.current_el.tag == 'item':
+                lists = [lst for lst in self.current_el.iterancestors('list')]
+                self.current_el = lists[-1] if len(lists) > 0 else self.current_el.getparent()
+            # Add <q><p>... as sibling of current element.
+            self.current_el.addnext(speech_el)
+            self.current_el = speech_el.find('p')
 
     def do_paragraph(self, p):
         if p.text.strip() == '':
@@ -559,8 +581,8 @@ class TextConverter:
             if elem is not None and elem.tail is None:
                 elem.tail = ""
 
-            if "Heading" in p.style.name:
-                rtxt = re.sub(r'^[\d\s\.]+', '', rtxt)
+            # if "Heading" in p.style.name:
+            #    rtxt = re.sub(r'^[\d\s\.]+', '', rtxt)
 
             char_style = run.style.name
             is_new_style = True if char_style != last_run_style else False
@@ -635,6 +657,18 @@ class TextConverter:
             self.current_el.text = temp_el.text
         for tempchild in temp_el.getchildren():
             self.current_el.append(tempchild)
+
+        # Deal with numbers at the beginning of headers
+        if "heading" in p.style.name.lower():
+            headtxt = self.current_el.text
+            mtch = re.match(r'^((\d+\.?)+)', headtxt)
+            if mtch:
+                hnum = mtch.group(1)
+                headtxt = headtxt.replace(hnum, '')
+                numel = etree.XML('<num>{}</num>'.format(hnum))
+                numel.tail = headtxt
+                self.current_el.text = ""
+                self.current_el.insert(0, numel)
 
     def process_critical(self, note, bcktxt):
         reading = False
