@@ -82,12 +82,26 @@ class TextConverter:
         # TODO: add more conversion code here. Iterate through paras then runs. Using stack method
         totalp = len(self.worddoc.paragraphs)
         ct = 0
+        in_app = False
+        app_ps = []
         for index, p in enumerate(self.worddoc.paragraphs):
             ct += 1
             print("\rDoing paragraph {} of {}  ".format(ct, totalp), end="")
             self.pindex = index
             if isinstance(p, docx.text.paragraph.Paragraph):
-                self.convertpara(p)
+                ptxt = p.text
+                if ptxt[0] == '{' and '}' not in ptxt:
+                    logging.info('Multiline apparatus begins: ' + ptxt)
+                    in_app = True
+                if in_app:
+                    app_ps.append(p)
+                    if ptxt[0] == '}':
+                        self.process_multiline_app(app_ps)
+                        logging.info("Multiline apparatus finished: " + ptxt)
+                        in_app = False
+                        apps_ps = []
+                else:
+                    self.convertpara(p)
             else:
                 self.mywarning("Warning: paragraph ({}) is not a docx paragraph cannot convert".format(p))
         print("")
@@ -419,7 +433,10 @@ class TextConverter:
         level = 2 if '2' in my_style else 1
         if level == 2:
             myel = etree.Element('l')
-            self.current_el.addnext(myel)
+            if not is_nested and "nested" in prev_style.lower():
+                self.current_el.getparent().addnext(myel)
+            else:
+                self.current_el.addnext(myel)
             self.current_el = myel
 
         elif is_cite:
@@ -444,7 +461,7 @@ class TextConverter:
 
         elif is_nested:
             markup = etree.XML('<lg><l></l></lg>')
-            self.current_el.append(markup)
+            self.current_el.addnext(markup)  # if nested, current el is "l", add "lg" next to this.
             self.current_el = markup.find('l')
 
         else:
@@ -725,7 +742,28 @@ class TextConverter:
                     logging.warning('Need to deal with multi paragraph apparatus')
         return reading
 
-
+    def process_multiline_app(self, app_ps):
+        orig_current_el = self.current_el
+        app_el = etree.XML('<p><app><rdg></rdg></app></p>')
+        self.current_el = app_el.find('app').find('rdg')
+        for ap in app_ps:
+            if ap.text[0] == '{' or ap.text[0] == '}':
+                continue
+            self.iterate_runs(ap)
+            if ap != app_ps[-1]:
+                lb = etree.XML('<lb/>')
+                self.current_el.append(lb)  # TODO: need to get iterate_runs to append after lb
+                self.current_el = lb
+        for rn in app_ps[-1].runs:
+            char_style = rn.style.name.lower()
+            if "footnote" in char_style or "endnote" in char_style:
+                note = self.endnotes.pop(0) if "endnote" in char_style.lower() else self.footnotes.pop(0)
+                if self.current_el.tag == 'lb':
+                    self.current_el.getparent().set('wit', note.text)
+                else:
+                    self.current_el.set('wit', note.text)
+        orig_current_el.addnext(app_el)
+        self.current_el = app_el
 
     @staticmethod
     def createmilestone(char_style, mstxt):
