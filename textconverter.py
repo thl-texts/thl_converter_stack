@@ -432,6 +432,13 @@ class TextConverter:
                 markup = etree.XML('<lg><l></l></lg>')
                 self.current_el.getparent().addnext(markup)
                 self.current_el = markup.find('l')
+
+            elif is_nested and "citation" in prev_style.lower() and "paragraph" in prev_style.lower():
+                # when nested in paragraph citation
+                markup = etree.XML('<lg><l></l></lg>')
+                self.current_el.addnext(markup)
+                self.current_el = markup.find('l')
+
             else:
                 markup = etree.XML('<quote><lg><l></l></lg></quote>')
                 if is_nested:
@@ -455,10 +462,27 @@ class TextConverter:
             self.headstack[-1].append(markup)
 
     def do_citation(self, p):
-        # Citations not already done in verse
-        vrs_el = etree.Element('p')
-        self.current_el.addnext(vrs_el)
-        self.current_el = vrs_el
+        my_style = p.style.name
+        prev_style = self.get_previous_p(True)  # TODO: Check if current style is same (except number) with previous
+        nested = True if "nested" in my_style.lower() else False
+        continued = True if "continued" in my_style.lower() else False
+
+        if continued or (nested and my_style == prev_style):
+            cite_el = etree.XML('<p rend="cont"></p>')
+            if "verse" in prev_style.lower():
+                self.current_el.getparent().addnext(cite_el)
+            else:
+                self.current_el.addnext(cite_el)
+            self.current_el = cite_el
+        else:
+            cite_el = etree.XML('<quote><p></p></quote>')
+            if nested:
+                self.current_el.append(cite_el)
+            elif "nested" in prev_style:
+                self.current_el.getparent().addnext(cite_el)
+            else:
+                self.current_el.addnext(cite_el)
+            self.current_el = cite_el.find('p')
 
     def do_section(self, p):
         vrs_el = etree.Element('p')
