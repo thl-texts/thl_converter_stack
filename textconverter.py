@@ -290,7 +290,9 @@ class TextConverter:
             self.do_citation(p)  # Note verse citation is done above in do_verse()
 
         elif "Section" in style_name:
-            self.do_section(p)
+            doruns = self.do_section(p)
+            if not doruns:
+                return
 
         elif "Speech" in style_name:
             self.do_speech(p)  # verse speech is done in do_verse()
@@ -485,9 +487,35 @@ class TextConverter:
             self.current_el = cite_el.find('p')
 
     def do_section(self, p):
-        vrs_el = etree.Element('p')
-        self.current_el.addnext(vrs_el)
-        self.current_el = vrs_el
+        my_style = p.style.name
+        ptext = p.text
+        nmtch = re.match(r'section\s+(\d)', my_style, re.IGNORECASE)
+        if nmtch:
+            n = nmtch.group(1)
+            sect_el = etree.XML('<milestone unit="section" n="{}" rend="{}" />'.format(n, ptext))
+            self.headstack[-1].append(sect_el)
+            self.current_el = sect_el
+            return False
+
+        elif 'chapter element' in my_style.lower():
+            sect_el = etree.XML('<milestone unit="section" n="cle" rend="{}" />'.format(ptext))
+            self.headstack[-1].append(sect_el)
+            self.current_el = sect_el
+            return False
+
+        elif 'interstitial' in my_style.lower():
+            sect_el = etree.XML('<div type="interstitial"><head></head></div>')
+            self.headstack[-1].append(sect_el)
+            self.current_el = sect_el.find('head')
+            return True
+
+        else:
+            logging.warning("Unknown section type with header: {}".format(ptext))
+            # TODO: Should this be a milestone instead of a div???
+            sect_el = etree.XML('<div type="section"><head></head></div>')
+            self.headstack[-1].append(sect_el)
+            self.current_el = sect_el.find('head')
+            return True
 
     def do_speech(self, p):
         #  Note this is speech not already covered in verse or citation. See convertpara() method above
