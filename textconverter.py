@@ -667,12 +667,22 @@ class TextConverter:
         # Copy temp_el contents to current_el depending on whether it has children or not
         if self.current_el is None:
             print('current el is none')
-        curr_child = self.current_el.getchildren() or []
+
+        if self.current_el.tag in ['lb', 'pb', 'milestone']:
+            empty_el = self.current_el
+            for tmpchld in temp_el.getchildren():
+                self.current_el.addnext(tmpchld)
+                self.current_el = tmpchld
+            empty_el.tail = temp_el.text
+            self.current_el = self.current_el.getparent()
+            return  # No need to do the following
+
+        curr_child = list(self.current_el) or []
         if len(curr_child) > 0:
             curr_child[-1].tail = temp_el.text
         else:
             self.current_el.text = temp_el.text
-        for tempchild in temp_el.getchildren():
+        for tempchild in list(temp_el):
             self.current_el.append(tempchild)
 
         # Deal with numbers at the beginning of headers
@@ -750,18 +760,33 @@ class TextConverter:
             if ap.text[0] == '{' or ap.text[0] == '}':
                 continue
             self.iterate_runs(ap)
-            if ap != app_ps[-1]:
+            if ap not in app_ps[-2:]:  # Not either the last line of app or the closing }
                 lb = etree.XML('<lb/>')
-                self.current_el.append(lb)  # TODO: need to get iterate_runs to append after lb
+                self.current_el.append(lb)
                 self.current_el = lb
         for rn in app_ps[-1].runs:
             char_style = rn.style.name.lower()
             if "footnote" in char_style or "endnote" in char_style:
                 note = self.endnotes.pop(0) if "endnote" in char_style.lower() else self.footnotes.pop(0)
+                ntxt = note.text
+                ntpts = ntxt.split(',')
+                sigla = []
+                pgs = []
+                for npt in ntpts:
+                    subpts = npt.split('(')
+                    sigla.append(subpts[0].strip())
+                    if len(subpts) > 1:
+                        pgs.append(subpts[1].replace(')', '').strip())
+                sigla = ' '.join(sigla)
+                pgs = ' '.join(pgs)
                 if self.current_el.tag == 'lb':
-                    self.current_el.getparent().set('wit', note.text)
+                    self.current_el.getparent().set('wit', sigla)
+                    if len(pgs) > 0:
+                        self.current_el.getparent().set('n', pgs)
                 else:
-                    self.current_el.set('wit', note.text)
+                    self.current_el.set('wit', sigla)
+                    if len(pgs) > 0:
+                        self.current_el.set('n', pgs)
         orig_current_el.addnext(app_el)
         self.current_el = app_el
 
