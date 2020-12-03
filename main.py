@@ -15,6 +15,9 @@ def main():
     parser.add_argument('-o', '--out',
                         default='./workspace/out',
                         help='The relative path to the out-folder where converted files are written')
+    parser.add_argument('--overwrite',
+                        action='store_true',
+                        help='Overwrite XML files by the same name in out directory')
     parser.add_argument('-l', '--log',
                         default='./workspace/logs',
                         help='The relative path to the out-folder where converted files are written')

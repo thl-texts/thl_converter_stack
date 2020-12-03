@@ -14,7 +14,6 @@ from styleelements import getStyleElement
 
 TEMPLATE_FOLDER = 'templates'
 
-
 class TextConverter:
 
     def __init__(self, args):
@@ -26,6 +25,7 @@ class TextConverter:
             raise NotADirectoryError("The in path, {}, is not a directory".format(self.indir))
         self.getfiles()
         self.outdir = args.out
+        self.overwrite = args.overwrite
         if not os.path.isdir(self.outdir):
             raise NotADirectoryError("The out path, {}, is not a directory".format(self.outdir))
         self.metafields = args.metafields if args.metafields else False
@@ -48,14 +48,15 @@ class TextConverter:
         logging.basicConfig(level=self.loglevel)
 
     def getfiles(self):
-        for sfile in os.listdir(self.indir):
+        files_in_dir = os.listdir(self.indir)
+        files_in_dir.sort()
+        for sfile in files_in_dir:
             if sfile.endswith(".docx") and not sfile.startswith('~'):
                 self.files.append(sfile)
 
     def setlog(self):
         # fname = os.path.split(fname)[1].replace('.docx', '') + '.log'
         logpath = os.path.join(self.log, self.current_file.replace('docx', 'log'))
-        print(logpath)
         if self.debug:
             print("Log file for {} is: {}".format(self.current_file, logpath))
         loghandler = logging.FileHandler(logpath, 'w')
@@ -66,7 +67,7 @@ class TextConverter:
 
     def convert(self):
         for fl in self.files:
-            print("Converting file: {}".format(fl))
+            print("\n======================================\nConverting file: {}".format(fl))
             self.current_file = fl
             self.setlog()
             self.convertdoc()
@@ -90,7 +91,7 @@ class TextConverter:
             self.pindex = index
             if isinstance(p, docx.text.paragraph.Paragraph):
                 ptxt = p.text
-                if ptxt[0] == '{' and '}' not in ptxt:
+                if len(ptxt) > 0 and ptxt[0] == '{' and '}' not in ptxt:
                     logging.info('Multiline apparatus begins: ' + ptxt)
                     in_app = True
                 if in_app:
@@ -313,7 +314,7 @@ class TextConverter:
 
         else:
             if not self.is_reg_p(style_name):
-                msg = "Style {} defaulting to paragraph".format(style_name)
+                msg = "\n\tStyle {} defaulting to paragraph".format(style_name)
                 self.mywarning(msg)
             self.reset_current_el()
             self.do_paragraph(p)
@@ -347,13 +348,19 @@ class TextConverter:
             if hlevel > currlevel:
                 # if new level is higher than the current level just add it to current
                 if hlevel - currlevel > 1:
-                    self.mywarning("Warning: Heading level skipped for {}".format(style_name, htext))
+                    self.mywarning("Warning: Heading level skipped for {}".format(style_name, p.text))
                 self.headstack[-1].append(hdiv)  # append the hdiv to the previous one
                 self.headstack.append(hdiv)      # add the hdiv to the stack
             # if it's the same level as current
             elif hlevel == currlevel:
-                self.headstack[-1].addnext(hdiv)
-                self.headstack[-1] = hdiv
+                if len(self.headstack) > 0 :
+                    self.headstack[-1].addnext(hdiv)
+                    self.headstack[-1] = hdiv
+                else:
+                    errmsg = "Headstack is empty when adding div ({})\n".format(hdiv.text)
+                    errmsg += "Make sure Body Heading0 is present."
+                    raise ConversionException(errmsg)
+
             # Otherwise it's a higher level
             else:
                 # because front, body, back is 0th element use hlevel to splice array
@@ -747,9 +754,8 @@ class TextConverter:
                     app += '</app>'
                     reading['app'] = etree.XML(app)
                 else:
-                    self.mywarning("Footnote follows close brace as for apparatus, but no preceding open brace " +
-                                    "found: {}".format(bcktxt))
-                    logging.warning('Need to deal with multi paragraph apparatus')
+                    self.mywarning("\n\tFootnote follows close brace as for apparatus, but no preceding open brace " +
+                                    "found: {}\n\tNote: {}".format(bcktxt, etree.tostring(note, encoding='unicode')))
         return reading
 
     def process_multiline_app(self, app_ps):
@@ -835,7 +841,7 @@ class TextConverter:
         # Determine Name for Resulting XML file
         fname = self.current_file.replace('.docx', '.xml')
         fpth = os.path.join(self.outdir, fname)
-        while os.path.isfile(fpth):
+        while os.path.isfile(fpth) and not self.overwrite:
             userin = input("The file {} already exists. Overwrite it (y/n/q): ".format(fname))
             if userin == 'y':
                 break
@@ -885,3 +891,8 @@ class TextConverter:
         if "Paragraph" not in style_name and "Outline" not in style_name and "Normal" not in style_name:
             return False
         return True
+
+
+class ConversionException(Exception):
+    pass
+

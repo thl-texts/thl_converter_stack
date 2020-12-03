@@ -3,7 +3,7 @@
 ########## Python Library to Convert Style Names to Elements ##########
 
 from lxml import etree
-import json
+import re
 
 ##### Global Element Dictionary ######
 
@@ -57,7 +57,7 @@ keydict = {
     "line-num-tib": ["Line Number Tib"],
     "mantra": ["X-Mantra"],
     "monuments": ["Monuments", "X-Monuments"],
-    "name-bud-deity": ["X-Name Buddhist  Deity", "Name Buddhist  Deity"],
+    "name-bud-deity": ["X-Name Buddhist Deity", "Name Buddhist Deity"],
     "name-bud-deity-coll": ["X-Name Buddhist Deity Collective", "Name Buddhist Deity Collective"],
     "name-ethnic": ["X-Name Ethnicity", "Name of ethnicity"],
     "name-fest": ["Name festival", "X-Name Festival"],
@@ -476,11 +476,12 @@ elements = {
 
 
 def getStyleElement(style_name):
-    '''
+    """
     Returns the XML element object for a particular style name
     :param style_name:
     :return:
-    '''
+    """
+    style_name = re.sub(r'\s+', ' ', style_name)  # Normalize spaces in style name
     elemdef = getStyleTagDef(style_name)
     if elemdef is None:
         print("Character style name {} was not found.".format(style_name))
@@ -502,6 +503,7 @@ def getStyleTagDef(style_name):
     :return:
     '''
     global elements, styledict
+    style_name = re.sub(r'\s+', ' ', style_name)  # Normalize spaces in style name
     # Create styledict if not already created
     if len(styledict) == 0:
         styledict = createStyleKeyDict()
@@ -530,6 +532,7 @@ def getTagFromStyle(style_name):
     :return:
     '''
     global elements, styledict
+    style_name = re.sub(r'\s+', ' ', style_name)  # Normalize spaces in style name
     eldef = getStyleTagDef(style_name)
     elout = "<{0}".format(eldef['tag'])
     for att in eldef['attributes']:

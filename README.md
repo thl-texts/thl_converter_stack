@@ -17,14 +17,14 @@ After downloading this repo and installing the python required modules from the 
 the following folder structure needs to be set up in the repo folder:
 
     workspace
-        in
-        logs
-        out
+      |__ in
+      |__ logs
+      |__ out
 
 Place the documents you want to convert in the "in" folder.
 
 Then run the `main.py` file. The in-folder, out-folder, log-folder, and metadata XML template can all be changed by 
-parameters which can be seen through --help
+parameters which can be seen through `python main.py --help`
 
 The converted files will be found in the out folder.
 
