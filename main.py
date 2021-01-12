@@ -25,7 +25,7 @@ def main():
                         action='store_true',
                         help='List the metadata fields in the template')
     parser.add_argument('-t', '--template',
-                        default='tib_text_template.xml',
+                        default='tib_text.xml',
                         help='Name of template file in template folder')
     parser.add_argument('-dtd', '--dtdpath',
                         default='http://texts.thlib.org/cocoon/texts/catalogs/',

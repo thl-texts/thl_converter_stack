@@ -234,8 +234,8 @@ class TextConverter:
         table labels. It uses the classes self.metatable property which is the Word docs metatable and
         self.template which is the string read in from the XML template file indicated in the settings
 
-        NOTE: This function should be overridden by particular template converters to customize
-        TODO: Create a generalized version to put here and use this for the chris_old template
+        NOTE: This function can be overridden by particular template converters to customize
+
         :return:
         """
         wordtable = self.metatable
@@ -245,16 +245,30 @@ class TextConverter:
         tablerows = len(wordtable.rows)
         for rwnum in range(0, tablerows):
             try:
-                if wordtable._column_count == 2:
+                if wordtable._column_count < 2:
+                    logging.warning("Row {} of metadata table has too few cells".format(rwnum))
+                    continue
+
+                elif wordtable._column_count == 2:
                     label = wordtable.cell(rwnum, 0).text.strip()
                     rowval = wordtable.cell(rwnum, 1).text.strip()
+
                 elif wordtable._column_count == 3:
                     label = wordtable.cell(rwnum, 0).text.strip()
                     rowval = wordtable.cell(rwnum, 1).text.strip()
-                    msg = "***** NOTICE: Need to update code for processing 3 column metadata tables!!!!! *******"
-                    self.mywarning(msg)
+                    self.mywarning("Notice: Not handling third column of row {}!".format(rwnum))
+
+                elif wordtable._column_count == 4 and wordtable.cell(rwnum, 0).text == wordtable.cell(rwnum, 2).text:
+                    # Not giving warning because this seems to be a Word or pydoc weirdness
+                    # In the stylized metadata table, it detects four columns per row
+                    # with the first 3 all containing the same label. So just using last two.
+                    label = wordtable.cell(rwnum, 2).text.strip()
+                    rowval = wordtable.cell(rwnum, 3).text.strip()
+
                 else:
-                    raise (ValueError('Metadata table does not have the right number of columns. Must be 2 or 3'))
+                    self.mywarning("Row {} of metadata table has too many ({}) cells. Using first two".format(rwnum))
+                    label = wordtable.cell(rwnum, 0).text.strip()
+                    rowval = wordtable.cell(rwnum, 1).text.strip()
 
                 # All Uppercase are Headers in the table skip
                 if label.isupper():
@@ -274,16 +288,23 @@ class TextConverter:
                                                     '<p>{}</p>'.format(rowval) +
                                                     '</interpretation></editorialDecl>')
                 temppt = label.split(' (')  # some rows have " (if applicable)" or possible some other instruction
+
+                # Normalizing Label
                 label = temppt[0].replace('\xa0', ' ').strip()
                 label = label.replace(' (if applicable)', '')
                 label = label.replace('Call་number', 'Call-number')
+                # 'Cover Title Tib' is in XML comment while 'Title on Cover' is in form (maybe a later correction)
+                if label in ('Title on Cover', 'Title on Cover Page', 'Title on Title Page'):
+                    label = 'Cover Title Tib'
+                # Normalize 'Cover Page Title' and 'Title Page Title' to 'Cover Title' in all occurrences
+                if label != 'Cover Page':
+                    label = label.replace('Cover Page', 'Cover').replace('Title Page', 'Cover')
                 srclbl = "{" + label + "}"
+
+                # Replace occurence of label in XML header
                 xmltext = xmltext.replace(srclbl, rowval)
-                if "Cover" in srclbl:
-                    srclblcp = srclbl.replace("Cover", "Cover Page")
-                    xmltext = xmltext.replace(srclblcp, rowval)
-                    srclbltp = srclbl.replace("Cover", "Title Page")
-                    xmltext = xmltext.replace(srclbltp, rowval)
+
+                # Deal with edition sigla
                 if label.lower() == 'edition sigla':
                     self.edsig = rowval
 
