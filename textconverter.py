@@ -279,6 +279,11 @@ class TextConverter:
                 label = label.replace('Call་number', 'Call-number')
                 srclbl = "{" + label + "}"
                 xmltext = xmltext.replace(srclbl, rowval)
+                if "Cover" in srclbl:
+                    srclblcp = srclbl.replace("Cover", "Cover Page")
+                    xmltext = xmltext.replace(srclblcp, rowval)
+                    srclbltp = srclbl.replace("Cover", "Title Page")
+                    xmltext = xmltext.replace(srclbltp, rowval)
                 if label.lower() == 'edition sigla':
                     self.edsig = rowval
 
