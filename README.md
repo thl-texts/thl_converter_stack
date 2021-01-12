@@ -26,6 +26,10 @@ Place the documents you want to convert in the "in" folder.
 Then run the `main.py` file. The in-folder, out-folder, log-folder, and metadata XML template can all be changed by 
 parameters which can be seen through `python main.py --help`
 
+For instance, to use the old metadata form template as well as replace any existing XML output file, one would do:
+
+`python main.py -t tib_text_old.xml --overwrite`
+
 The converted files will be found in the out folder.
 
 Than Grove

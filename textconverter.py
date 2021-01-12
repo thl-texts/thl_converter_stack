@@ -335,13 +335,14 @@ class TextConverter:
         style_name = p.style.name
         if hlevel == 0:
             # If level is 0, its front body or back, create element and clear head stack
-            fbbel = etree.XML('<{0}><head></head></{0}>'.format(headmtch.group(2).lower()))
+            fbbel = etree.XML('<{0}><head></head></{0}>'.format(headmtch.group(2).lower())) # the match is e.g. "front"
             self.xmlroot.find('text').append(fbbel)
             self.current_el = fbbel.find('head')
             self.headstack = [fbbel]
         else:
             # Otherwise we are already in front, body, or back, so create div
             currlevel = len(self.headstack) - 1  # subtract one bec. div 0 is at top of stack
+            # TODO: Need to assign ids to divs "a1", "b4", "c2" etc.
             # TODO: need to parse the p element in case there is internal markup to put in head
             hdiv = etree.XML('<div n="{}"><head></head></div>'.format(hlevel))
             # if it's the next level deeper
@@ -374,7 +375,7 @@ class TextConverter:
         my_style = p.style.name
         my_num = self.getnumber(my_style) or 1
         prev_style = self.get_previous_p(True)
-        prev_num = self.getnumber(prev_style)
+        prev_num = self.getnumber(prev_style) if "List" in prev_style else False
         if not prev_num:
             if my_style == prev_style:
                 prev_num = my_num
@@ -383,7 +384,7 @@ class TextConverter:
 
         # Determine the type of list and set attribute values
         rend = "bullet" if "Bullet" in my_style else "1"
-        nval = ' n="1"' if rend == "1" else False
+        nval = ' n="1"' if rend == "1" else ""
         # ptxt = p.text
 
         # Create element object templates (used below in different contexts). Not all are used in all cases
