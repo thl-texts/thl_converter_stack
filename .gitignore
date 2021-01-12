@@ -1,7 +1,4 @@
 __pycache__
 env
-workspace/in/*
-workspace/logs/*
-workspace/out/*
-workspace/test/*
+workspace
 test

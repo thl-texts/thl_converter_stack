@@ -21,6 +21,7 @@ the following folder structure needs to be set up in the repo folder:
       |__ logs
       |__ out
 
+The `workspace` folder is not included in the git repo. 
 Place the documents you want to convert in the "in" folder.
 
 Then run the `main.py` file. The in-folder, out-folder, log-folder, and metadata XML template can all be changed by 
