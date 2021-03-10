@@ -738,6 +738,13 @@ class TextConverter:
                 self.current_el.insert(0, numel)
 
     def process_critical(self, note, bcktxt):
+        '''
+        Processes footnotes for critical edition with alternate readings from other editions
+
+        :param note:
+        :param bcktxt:
+        :return:
+        '''
         reading = False
         if len(bcktxt) > 0:
             if bcktxt[-1] == '}':
@@ -745,51 +752,71 @@ class TextConverter:
                 if cestind > -1:
                     reading = {}
                     lem = bcktxt[cestind + 1:len(bcktxt) - 1].strip()
-                    variants = []
                     reading['backtext'] = bcktxt[0:cestind]
-                    notepts = note.find('rs').text.split(';')
-                    for rdg in notepts:
-                        eds = []
-                        pref = True if '*' in rdg else False
-                        rdg = rdg.strip(' *')
-                        rpts = rdg.split(':')
-                        tempeds = [ed.strip() for ed in rpts[0].split(',')]
-                        for ed in tempeds:
-                            epts = ed.replace(')', '').split('(')
-                            edobj = {'sigla': epts[0]}
-                            if len(epts) > 1:
-                                edobj['page'] = epts[1]
-                            eds.append(edobj)
-                        rdgtxt = rpts[1] if len(rpts) > 1 else False
-                        variants.append({
-                            'pref': pref,
-                            'eds': eds,
-                            'txt': rdgtxt.strip() if rdgtxt else ''
-                        })
+                    lemed = self.edsig if self.edsig and self.edsig != '' else 'base'
+                    lempg = ''
+                    notedata = TextConverter.process_critical_note(note)
+                    if notedata['lem']:
+                        lemed = notedata['lem']['edsigs']
+                        lempg = ' n=""'.format(notedata['lem']['edpgs'])
 
-                    app = '<app><lem wit="{}">{}</lem>'.format(self.edsig, lem)
-                    for vrnt in variants:
+                    app = '<app><lem wit="{}"{}>{}</lem>'.format(lemed, lempg, lem)
+                    for vrnt in notedata['variants']:
                         natt = ''
-                        edsigs = [ed['sigla'] for ed in vrnt['eds']]
-                        edsig = ' '.join(edsigs)
-                        edpgs = [ed['page'] if 'page' in ed.keys() else '' for ed in vrnt['eds']]
-                        edpgs = ' '.join(edpgs)
-                        edpgs = edpgs.strip(' ')
-                        if len(edpgs) > 0:
-                            natt = ' n="{}"'.format(edpgs)
+                        if len(vrnt['edpgs']) > 0:
+                            natt = ' n="{}"'.format(vrnt['edpgs'])
                         if vrnt['pref']:
                             natt += ' rend="pref"'
                         vartxt = lem if vrnt['txt'] == '' else vrnt['txt']
                         if 'omit' in vartxt:
-                            app += '<rdg wit="{}"{} />'.format(edsig, natt)
+                            app += '<rdg wit="{}"{} />'.format(vrnt['edsigs'], natt)
                         else:
-                            app += '<rdg wit="{}"{}>{}</rdg>'.format(edsig, natt, vartxt)
+                            app += '<rdg wit="{}"{}>{}</rdg>'.format(vrnt['edsigs'], natt, vartxt)
                     app += '</app>'
                     reading['app'] = etree.XML(app)
                 else:
                     self.mywarning("\n\tFootnote follows close brace as for apparatus, but no preceding open brace " +
                                     "found: {}\n\tNote: {}".format(bcktxt, etree.tostring(note, encoding='unicode')))
         return reading
+
+    @staticmethod
+    def process_critical_note(anote):
+        notepts = anote.find('rs').text.split(';')
+        notedata = {
+            'lem': False,
+            'variants': []
+        }
+        for rdg in notepts:
+            eds = []
+            pref = True if '*' in rdg else False
+            rdg = rdg.strip(' *')
+            rpts = rdg.split(':')
+            tempeds = [ed.strip() for ed in rpts[0].split(',')]
+            edsigs = []
+            edpgs = []
+            for ed in tempeds:
+                epts = ed.replace(')', '').split('(')
+                edsigs.append(epts[0])
+                edpg = epts[1] if len(epts) > 1 else ''
+                edpgs.append(edpg)
+
+            edsigs = ' '.join(edsigs)
+            edpgs = ' '.join(edpgs)
+
+            rdgtxt = rpts[1] if len(rpts) > 1 else False
+            if not rdgtxt:
+                notedata['lem'] = {
+                    'edsigs': edsigs,
+                    'edpgs': edpgs
+                }
+            else:
+                notedata['variants'].append({
+                    'pref': pref,
+                    'edsigs': edsigs,
+                    'edpgs': edpgs,
+                    'txt': rdgtxt.strip() if rdgtxt else ''
+                })
+        return notedata
 
     def process_multiline_app(self, app_ps):
         orig_current_el = self.current_el
@@ -807,17 +834,12 @@ class TextConverter:
             char_style = rn.style.name.lower()
             if "footnote" in char_style or "endnote" in char_style:
                 note = self.endnotes.pop(0) if "endnote" in char_style.lower() else self.footnotes.pop(0)
-                ntxt = note.text
-                ntpts = ntxt.split(',')
-                sigla = []
-                pgs = []
-                for npt in ntpts:
-                    subpts = npt.split('(')
-                    sigla.append(subpts[0].strip())
-                    if len(subpts) > 1:
-                        pgs.append(subpts[1].replace(')', '').strip())
-                sigla = ' '.join(sigla)
-                pgs = ' '.join(pgs)
+                notedata = TextConverter.process_critical_note(note)
+                sigla = self.edsig
+                pgs = ''
+                if notedata['lem']:
+                    sigla = notedata['lem']['edsigs']
+                    pgs = notedata['lem']['edpgs']
                 if self.current_el.tag == 'lb':
                     self.current_el.getparent().set('wit', sigla)
                     if len(pgs) > 0:
@@ -826,6 +848,11 @@ class TextConverter:
                     self.current_el.set('wit', sigla)
                     if len(pgs) > 0:
                         self.current_el.set('n', pgs)
+
+                for vrnt in notedata['variants']:
+                    rdg = '<rdg wit={} n={}>{}</rdg>'.format(vrnt['edsigs'], vrnt['edpgs'], vrnt['txt'])
+                    rdg = etree.XML(rdg)
+                    app_el.append(rdg)
         orig_current_el.addnext(app_el)
         self.current_el = app_el
 
