@@ -33,7 +33,22 @@ For instance, to use the old metadata form template as well as replace any exist
 
 The converted files will be found in the out folder.
 
-Than Grove
-Created Oct. 30, 2020
-Updated Dec. 2, 2020
+## Formatting Word Docs 
+The converter takes essays or texts in Microsoft Word documents and converts them to THL XML. To do so,
+the text in the Word docs must be "marked up" with THL custom styles. These are found in 
+[our custom Word Template](https://drive.google.com/file/d/1RN71aJESmmQq4cQaZIVd_I8hzqJaZahx/view?usp=sharing). 
+
+The
+instructions for how to use the styles can be found in the 
+[THL Text Editing Manual style guide](https://docs.google.com/document/d/1BJEwSXzXwwqgY9xPbNor-RmsZHpmVqjOb6JMwTiPVUY/edit). 
+
+
+At the beginning of the Word document should be a 
+[metadata table](https://drive.google.com/file/d/16pzm1cxMgGZTccU9-kY72hSKC2ihTZQd/view?usp=sharing). 
+Instructions for filling out the metadata table are also found in the editing manual.
+
+
+Than Grove  
+Created Oct. 30, 2020  
+Updated March 10, 2021
 

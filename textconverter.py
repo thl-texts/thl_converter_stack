@@ -71,6 +71,7 @@ class TextConverter:
             self.current_file = fl
             self.setlog()
             self.convertdoc()
+            self.assignids()
             self.writexml()
 
     def convertdoc(self):
@@ -863,6 +864,38 @@ class TextConverter:
                 self.current_el = hdr
             else:
                 self.current_el = children[-1]
+
+    def assignids(self):
+        # print("i am here")
+        print("\rAssigning IDs");
+        divs = self.xmlroot.xpath('/*//text//div')
+        for divel in divs:
+            ancids = list(self.getSiblingPos(divel))
+            textpt = ''  # To store the a/b/c for front, body or back
+            for anc in divel.iterancestors():  # Iterates ancestors in reverse from current element up to TEI.2
+                ancid = self.getSiblingPos(anc)  # returns number for div or a, b, c for front body or back
+                if ancid.isnumeric():
+                    ancids.append(ancid)
+                else:
+                    txtpt = ancid
+                    break   # break after front body or back to not count text or TEI.2
+            ancids.reverse()
+            myid = txtpt + '-'.join(ancids)
+            divel.set('id', myid)
+
+    @staticmethod
+    def getSiblingPos(el):
+        atag = el.tag
+        if atag == "front":
+            return "a"
+        if atag == "body":
+            return "b"
+        if atag == "back":
+            return "c"
+        anum = 1
+        for sib in el.itersiblings('div', preceding=True):
+            anum += 1
+        return str(anum)
 
     def writexml(self):
         # Determine Name for Resulting XML file
