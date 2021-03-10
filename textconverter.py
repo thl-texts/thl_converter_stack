@@ -42,6 +42,7 @@ class TextConverter:
         self.current_el = None
         self.pindex = -1
         self.edsig = ''
+        self.chapnum = None
 
         self.log = args.log
         self.loglevel = logging.DEBUG if self.debug else logging.WARN
@@ -308,6 +309,10 @@ class TextConverter:
                 # Deal with edition sigla
                 if label.lower() == 'edition sigla':
                     self.edsig = rowval
+
+                # Deal with Chapter Number
+                if label.lower() == 'chapter number':
+                    self.chapnum = rowval
 
             except IndexError as e:
                 logging.error("Index error in iterating wordtable: {}".format(e))
@@ -866,7 +871,6 @@ class TextConverter:
                 self.current_el = children[-1]
 
     def assignids(self):
-        # print("i am here")
         print("\rAssigning IDs");
         divs = self.xmlroot.xpath('/*//text//div')
         for divel in divs:
@@ -880,6 +884,8 @@ class TextConverter:
                     txtpt = ancid
                     break   # break after front body or back to not count text or TEI.2
             ancids.reverse()
+            if self.chapnum:
+                ancids[0] = self.chapnum
             myid = txtpt + '-'.join(ancids)
             divel.set('id', myid)
 
