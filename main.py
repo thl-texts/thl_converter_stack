@@ -2,6 +2,7 @@
 
 import argparse
 from textconverter import TextConverter
+from digitalpages import DigitalPages
 
 
 def main():
@@ -9,35 +10,46 @@ def main():
 
     # Generate the arg parser and options
     parser = argparse.ArgumentParser(description='Convert THL Word marked up documents to THL TEI XML')
+    parser.add_argument('-d', '--debug',
+                        action="store_true",
+                        help='Whether to debug')
+    parser.add_argument('-dtd', '--dtdpath',
+                        default='http://texts.thlib.org/cocoon/texts/catalogs/',
+                        help='Path to the xtib3.dtd to add to the xmlfile')
     parser.add_argument('-i', '--indir',
                         default='./workspace/in',
                         help='The relative path to the in-folder containing files to be converted')
-    parser.add_argument('-o', '--out',
-                        default='./workspace/out',
-                        help='The relative path to the out-folder where converted files are written')
-    parser.add_argument('--overwrite',
-                        action='store_true',
-                        help='Overwrite XML files by the same name in out directory')
     parser.add_argument('-l', '--log',
                         default='./workspace/logs',
                         help='The relative path to the out-folder where converted files are written')
     parser.add_argument('-mtf', '--metafields',
                         action='store_true',
                         help='List the metadata fields in the template')
+    parser.add_argument('-o', '--out',
+                        default='./workspace/out',
+                        help='The relative path to the out-folder where converted files are written')
+    parser.add_argument('-ow', '--overwrite',
+                        action='store_true',
+                        help='Overwrite XML files by the same name in out directory')
     parser.add_argument('-t', '--template',
                         default='tib_text.xml',
                         help='Name of template file in template folder')
-    parser.add_argument('-dtd', '--dtdpath',
-                        default='http://texts.thlib.org/cocoon/texts/catalogs/',
-                        help='Path to the xtib3.dtd to add to the xmlfile')
-    parser.add_argument('-d', '--debug',
-                        action="store_true",
-                        help='Whether to debug')
+    parser.add_argument('-tp', '--type',
+                        default="word-2-xml",
+                        help='Type of conversion to perform')
 
     args = parser.parse_args()
-    converter = TextConverter(args)
-    converter.convert()
 
+    # Initialize appropriate converter for type
+    if args.type == 'digpage':
+        print("Digital Page conversions!")
+        converter = DigitalPages(args)
+    else:
+        print("Word to XML Conversion")
+        converter = TextConverter(args)
+
+    # Do the Conversion
+    converter.convert()
     print("***********************************")
 
 
