@@ -71,7 +71,8 @@ class BaseConverter:
         for fl in self.files:
             print("\n======================================\nConverting file: {}".format(fl))
             self.current_file = fl
-            self.setlog()
+            if self.debug:
+                self.setlog()
             self.convertdoc()
 
     def convertdoc(self):

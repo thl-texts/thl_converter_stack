@@ -28,12 +28,16 @@ def main():
     parser.add_argument('-o', '--out',
                         default='./workspace/out',
                         help='The relative path to the out-folder where converted files are written')
+    parser.add_argument('-opt', '--options',
+                        default='',
+                        help='JSON String of options for each converter')
     parser.add_argument('-ow', '--overwrite',
                         action='store_true',
                         help='Overwrite XML files by the same name in out directory')
     parser.add_argument('-t', '--template',
                         default='tib_text.xml',
                         help='Name of template file in template folder')
+    # Make type the only positional that defaults to word-2-xml
     parser.add_argument('-tp', '--type',
                         default="word-2-xml",
                         help='Type of conversion to perform')
