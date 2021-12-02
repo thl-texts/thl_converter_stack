@@ -10,7 +10,7 @@ import docx
 from lxml import etree
 
 from datetime import date
-from styleelements import getStyleElement
+from styleelements import getStyleElement, fontSame, getFontElement
 
 TEMPLATE_FOLDER = 'templates'
 
@@ -125,10 +125,17 @@ class TextConverter:
             lastrun = False
             # Merge runs with same style
             for n, r in enumerate(para.runs):
-                if lastrun is not False and r.style.name == lastrun.style.name:
-                    lastrun.text += r.text
-                    runs2remove.append(r)
+                if lastrun is False:
+                    # if false no last run to compare, set lastrun
+                    lastrun = r
+                elif not fontSame(lastrun, r):
+                    lastrun = r
+                elif r.style.name == lastrun.style.name:
+                        # Otherwise is charstyle and font characteristics are the same, append the two
+                        lastrun.text += r.text
+                        runs2remove.append(r)
                 else:
+                    # if style name is different and font characteristics are the same, start a new run (lastrun = r)
                     lastrun = r
             # Remove all runs thus merged
             for rr in runs2remove:
@@ -615,7 +622,13 @@ class TextConverter:
 
     def iterate_runs(self, p):
         '''
-        In old converter this was iterateRange (the interateRuns function was not called)
+        Populates a paragraph level element with its runs properly marked up (these are character level styles)
+        Creates a <temp> element to contain the inner XML structure of the paragraph level element
+        Iterates over the runs in the paragraph creating "elem" elements sometimes with inner structure.
+        These get appended to <temp> which in the end is added to the doc and becomes self.current_el
+
+        [In old converter this was iterateRange (the interateRuns function was not called)]
+
         :param p:
         :return:
         '''
@@ -645,7 +658,13 @@ class TextConverter:
             is_new_style = True if char_style != last_run_style else False
             # Default Paragraph Font
             if not char_style or char_style == "" or "Default Paragraph Font" in char_style:
-                if elem is None:
+                # May be in Default Font but have bold or italic ste
+                new_el = getFontElement(run)  # Check for those font characteristics
+                if new_el is not None:
+                    new_el.text = rtxt
+                    temp_el.append(new_el)
+                    elem = temp_el.getchildren()[-1]
+                elif elem is None:
                     temp_el.text += rtxt
                 else:
                     elem.tail += rtxt
@@ -690,24 +709,26 @@ class TextConverter:
             elif is_new_style or elem is None or elem is False:
                 new_el = getStyleElement(char_style)
                 if new_el is None:
-                    new_el = etree.Element('s')
-                    new_comment = etree.Comment("No style definition found for style name: {}".format(char_style))
-                    new_el.append(new_comment)
-                logging.debug('Style element {} => {}'.format(char_style, new_el.tag))
-                new_el.text = rtxt
-                temp_el.append(new_el)
-                elem = temp_el.getchildren()[-1]
-
+                    temp_el.text += rtxt
+                    # new_el = etree.Element('s')
+                    # new_comment = etree.Comment("No style definition found for style name: {}".format(char_style))
+                    # new_el.append(new_comment)
+                else:
+                    if self.debug:
+                        logging.debug('Style element {} => {}'.format(char_style, new_el.tag))
+                    new_el.text = rtxt
+                    temp_el.append(new_el)
+                    elem = temp_el.getchildren()[-1]
             else:
                 elem.text += rtxt
 
             last_run_style = char_style
-        # End of interating runs
+        ### End of iterating runs ###
+
+        if self.current_el is None:
+            print('current el is none')  # Should never get here
 
         # Copy temp_el contents to current_el depending on whether it has children or not
-        if self.current_el is None:
-            print('current el is none')
-
         if self.current_el.tag in ['lb', 'pb', 'milestone']:
             empty_el = self.current_el
             for tmpchld in temp_el.getchildren():

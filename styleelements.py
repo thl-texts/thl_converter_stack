@@ -484,8 +484,9 @@ def getStyleElement(style_name):
     style_name = re.sub(r'\s+', ' ', style_name)  # Normalize spaces in style name
     elemdef = getStyleTagDef(style_name)
     if elemdef is None:
-        print("Character style name {} was not found.".format(style_name))
-        return etree.XML('<s n="{}"></s>'.format(style_name))
+        if style_name != 'Paragraph Char':
+            print("Character style name {} was not found.".format(style_name))
+        return None
     elem = etree.Element(elemdef['tag'])
     if 'attributes' in elemdef:
         atts = elemdef['attributes']
@@ -591,6 +592,33 @@ def list_all():
         el = getTagFromStyle(k)
         print("{0:<40} :\t\t{1:<25}:\t\t{2}".format(k, skl[k], el))
         # print "%s\t\t:\t\t%s" % (k, skl[k])
+
+
+def fontSame(r1, r2):
+    props = ['all_caps', 'bold', 'double_strike', 'italic', 'small_caps', 'underline']
+    font1 = r1.font
+    font2 = r2.font
+    for prop in props:
+        prp1 = font1.__getattribute__(prop)
+        prp2 = font2.__getattribute__(prop)
+        if prp1 != prp2:
+            # print(f"different {prop} values: {prp1} : {prp2}")
+            return False
+    return True
+
+
+def getFontElement(r):
+    props = ['all_caps', 'bold', 'double_strike', 'italic', 'small_caps', 'underline']
+    onvals = []
+    for prop in props:
+        if r.font.__getattribute__(prop):
+            pname = prop.replace('_', '')
+            onvals.append(pname)
+    if len(onvals) == 0:
+        return None
+    elem = etree.Element('hi')
+    elem.set('rend', ' '.join(onvals))
+    return elem
 
 
 def main():
