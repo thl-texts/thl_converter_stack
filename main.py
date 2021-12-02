@@ -18,16 +18,19 @@ def main():
                         help='Path to the xtib3.dtd to add to the xmlfile')
     parser.add_argument('-i', '--indir',
                         default='./workspace/in',
-                        help='The relative path to the in-folder containing files to be converted')
+                        help='The relative path to the in-folder containing files to be converted. '
+                             'Defaults to ./workspace/in')
     parser.add_argument('-l', '--log',
                         default='./workspace/logs',
-                        help='The relative path to the out-folder where converted files are written')
+                        help='The relative path to the out-folder where converted files are written. '
+                             'Defaults to ./workspace/logs')
     parser.add_argument('-mtf', '--metafields',
                         action='store_true',
                         help='List the metadata fields in the template')
     parser.add_argument('-o', '--out',
                         default='./workspace/out',
-                        help='The relative path to the out-folder where converted files are written')
+                        help='The relative path to the out-folder where converted files are written. '
+                             'Defaults to ./workspace/out')
     parser.add_argument('-opt', '--options',
                         default='',
                         help='JSON String of options for each converter')
