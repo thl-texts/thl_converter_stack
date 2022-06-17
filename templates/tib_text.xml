@@ -1,19 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE TEI.2 SYSTEM "http://texts.thlib.org/cocoon/texts/catalogs/xtib3.dtd">
-<TEI.2>
+<TEI.2 rend="styled full">
 	<teiHeader lang="eng">
 		<fileDesc>
 			<titleStmt>
-				<title lang="tib" n="main">{Title of Text}</title>
-				<title lang="tib" n="cover">{Cover Title Tib}</title>
-				<title lang="san" rend="script:deva">{Cover Title San}</title>
-				<title lang="san" n="cover" rend="script:tib">{Cover Title San in Tib}</title>
-				<title lang="san" n="cover" rend="script:lanydza">{Cover Title San in Lanydza}</title>
-				<title lang="tib" n="spine">{Title on Spine}</title>
-				<title lang="tib" n="margin">{Margin Title}</title>
+				<title lang="tib" type="text" n="main">{Title of Text}</title>
+				<title lang="tib" type="text" n="cover">{Cover Title Tib}</title>
+				<title lang="san" type="text" n="normalized" rend="script:deva">{Cover Title San}</title>
+				<title lang="san" type="text" n="cover" rend="script:tib">{Cover Title San in Tib}</title>
+				<title lang="san" type="text" n="cover" rend="script:lanydza">{Cover Title San in Lanydza}</title>
+				<title lang="tib" type="text" n="spine">{Title on Spine}</title>
+				<title lang="tib" type="text" n="margin">{Margin Title}</title>
+				<title lang="tib" type="collection">{Name of Collection}</title>
 				<author>{Author of Text}</author>
 			</titleStmt>
 			<publicationStmt n="digital-file">
+				<idno type="text">{Text ID}</idno>
 				<respStmt n="creation">
 					<resp>Creator</resp>
 					<name n="agent">{Name of Agent Creating Etext}</name>
@@ -28,7 +30,7 @@
 					<date n="end">{Date Proof Finished}</date>
 					<name type="place"><geogName>{Place of Proof}</geogName></name>
 				</respStmt>
-				<respStmt n="markup">
+				<respStmt n="markup" id="thleditor">
 					<resp>Markup</resp>
 					<name n="agent">{Name of Markup-er}</name>
 					<date n="start">{Date Markup Began}</date>
@@ -58,7 +60,7 @@
 				</pubPlace>
 				<date>{Digital Creation Date}</date>
 			</publicationStmt>
-			<sourceDesc>
+			<sourceDesc n="bibl">
 				<!-- Cover page full contents -->
 				<p n="cover-page" lang="tib">{Cover Page}</p>
 				<!--The Bibliographic Information of the Original Text or Journal if from a print publication-->
@@ -83,6 +85,16 @@
 				<p n="problems">{Problems/Anomalies}</p>
 			</sourceDesc>
 		</fileDesc>
+		<encodingDesc>
+			<editorialDecl n="problems">
+				<interpretation corresp="thleditor">
+					{Problems}
+				</interpretation>
+			</editorialDecl>
+			<tagsDecl>
+				<rendition id="text">styled</rendition>
+			</tagsDecl>
+		</encodingDesc>
 		<profileDesc>
 			<langUsage>
 				<language id="ara">Arabic</language>

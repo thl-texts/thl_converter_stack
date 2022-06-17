@@ -13,6 +13,7 @@ from datetime import date
 from styleelements import getStyleElement, fontSame, getFontElement
 
 TEMPLATE_FOLDER = 'templates'
+IGNORABLE_STYLES = ['Paragraph Char', 'List Bullet Char']
 
 class TextConverter:
 
@@ -43,6 +44,7 @@ class TextConverter:
         self.pindex = -1
         self.edsig = ''
         self.chapnum = None
+        self.textid = ''
 
         self.log = args.log
         self.loglevel = logging.DEBUG if self.debug else logging.WARN
@@ -73,6 +75,7 @@ class TextConverter:
             self.setlog()
             self.convertdoc()
             self.assignids()
+            self.tidyxml()
             self.writexml()
 
     def convertdoc(self):
@@ -131,9 +134,9 @@ class TextConverter:
                 elif not fontSame(lastrun, r):
                     lastrun = r
                 elif r.style.name == lastrun.style.name:
-                        # Otherwise is charstyle and font characteristics are the same, append the two
-                        lastrun.text += r.text
-                        runs2remove.append(r)
+                    # Otherwise is charstyle and font characteristics are the same, append the two
+                    lastrun.text += r.text
+                    runs2remove.append(r)
                 else:
                     # if style name is different and font characteristics are the same, start a new run (lastrun = r)
                     lastrun = r
@@ -154,79 +157,86 @@ class TextConverter:
         zipdoc = zipfile.ZipFile(self.current_file_path)
 
         # write content of endnotes.xml into self.footnotes[]
-        fnotestxt = zipdoc.read('word/footnotes.xml')
-        xml_fn_root = etree.fromstring(fnotestxt)
-        # To output the footnote XML file from Word uncomment the lines below:
-        # with open('./workspace/logs/footnotes-test.xml', 'wb') as xfout:
-        #     xfout.write(etree.tostring(xml_fn_root))
-        fnindex = 0
-        fnotes = xml_fn_root.findall('w:footnote', xml_fn_root.nsmap)
-        for f in fnotes:
-            if fnindex > 1:  # The first two "footnotes" are the separation and continuation lines
-                text = f.findall('.//w:t', xml_fn_root.nsmap)
-                s = ""
-                plains = ""
-                wdschema = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
-                for t in text:
-                    ttxt = t.text
-                    plains += ttxt
-                    prev = t.getprevious()  # This returns <w:rPr> or None
-                    if prev is not None:
-                        tsty = []
-                        lang = ""
-                        for pc in prev.getchildren():
-                            pcstyle = re.sub(r'\{[^\}]+\}', '', pc.tag)
-                            if pcstyle == 'rStyle':
-                                if pc.get(wdschema + 'val') == 'X-EmphasisStrong':
-                                    tsty.append('strong')
-                            elif pcstyle == 'i':
-                                tsty.append('weak')
-                            elif pcstyle == 'u':
-                                tsty.append('underline')
-                            elif pcstyle == 'lang':
-                                if pc.get(wdschema + 'bidi') == 'bo-CN':
-                                    lang = ' lang="tib"'
-                        attr = "" if len(tsty) == 0 else ' rend="{}"'.format(' '.join(tsty))
-                        attr += lang
-                        ttxt = '<hi{}>{}</hi>'.format(attr, ttxt)
-                    s += ttxt
-                note_el = etree.XML('<note type="footnote">{}<rs>{}</rs></note>'.format(s, plains))
-                self.footnotes.append(note_el)
-            fnindex += 1
+        fntfile = 'word/footnotes.xml'
+        if fntfile in zipdoc.namelist():
+            fnotestxt = zipdoc.read('word/footnotes.xml')
+            xml_fn_root = etree.fromstring(fnotestxt)
+            # To output the footnote XML file from Word uncomment the lines below:
+            # with open('./workspace/logs/footnotes-test.xml', 'wb') as xfout:
+            #     xfout.write(etree.tostring(xml_fn_root))
+            fnindex = 0
+            fnotes = xml_fn_root.findall('w:footnote', xml_fn_root.nsmap)
+            for f in fnotes:
+                if fnindex > 1:  # The first two "footnotes" are the separation and continuation lines
+                    text = f.findall('.//w:t', xml_fn_root.nsmap)
+                    s = ""
+                    plains = ""
+                    wdschema = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+                    for t in text:
+                        ttxt = t.text
+                        plains += ttxt
+                        prev = t.getprevious()  # This returns <w:rPr> or None
+                        if prev is not None:
+                            tsty = []
+                            lang = ""
+                            for pc in prev.getchildren():
+                                pcstyle = re.sub(r'\{[^\}]+\}', '', pc.tag)
+                                if pcstyle == 'rStyle':
+                                    if pc.get(wdschema + 'val') == 'X-EmphasisStrong':
+                                        tsty.append('strong')
+                                elif pcstyle == 'i':
+                                    tsty.append('weak')
+                                elif pcstyle == 'u':
+                                    tsty.append('underline')
+                                elif pcstyle == 'lang':
+                                    if pc.get(wdschema + 'bidi') == 'bo-CN':
+                                        lang = ' lang="tib"'
+                            attr = "" if len(tsty) == 0 else ' rend="{}"'.format(' '.join(tsty))
+                            attr += lang
+                            ttxt = '<hi{}>{}</hi>'.format(attr, ttxt)
+                        s += ttxt
+                    note_el = etree.XML('<note type="footnote">{}<rs>{}</rs></note>'.format(s, plains))
+                    self.footnotes.append(note_el)
+                fnindex += 1
 
-        # write content of endnotes.xml into self.endnotes[]
-        xml_content = zipdoc.read('word/endnotes.xml')
-        xml_en_root = etree.fromstring(xml_content)
-        enindex = 0
-        enotes = xml_en_root.findall('w:endnote', xml_en_root.nsmap)
-        for f in enotes:
-            if enindex > 1:
-                text = f.findall('.//w:t', xml_en_root.nsmap)
-                s = ""
-                wdschema = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
-                for t in text:
-                    ttxt = t.text
-                    prev = t.getprevious()  # This returns <w:rPr> or None
-                    if prev is not None:
-                        tsty = []
-                        for pc in prev.getchildren():
-                            pcstyle = re.sub(r'\{[^\}]+\}', '', pc.tag)
-                            if pcstyle == 'rStyle':
-                                if pc.get(wdschema + 'val') == 'X-EmphasisStrong':
-                                    tsty.append('strong')
-                            if pcstyle == 'i':
-                                tsty.append('weak')
-                            if pcstyle == 'u':
-                                tsty.append('underline')
-                        ttxt = '<hi rend="{}">{}</hi>'.format(' '.join(tsty), ttxt)
-                    s += ttxt
-                note_el = etree.XML('<note type="endnote">{}</note>'.format(s))
-                self.endnotes.append(note_el)
-            enindex += 1
+        endntfile = 'word/endnotes.xml'
+        if endntfile in zipdoc.namelist():
+            # write content of endnotes.xml into self.endnotes[]
+            xml_content = zipdoc.read(endntfile)
+            xml_en_root = etree.fromstring(xml_content)
+            enindex = 0
+            enotes = xml_en_root.findall('w:endnote', xml_en_root.nsmap)
+            for f in enotes:
+                if enindex > 1:
+                    text = f.findall('.//w:t', xml_en_root.nsmap)
+                    s = ""
+                    wdschema = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+                    for t in text:
+                        ttxt = t.text
+                        prev = t.getprevious()  # This returns <w:rPr> or None
+                        if prev is not None:
+                            tsty = []
+                            for pc in prev.getchildren():
+                                pcstyle = re.sub(r'\{[^\}]+\}', '', pc.tag)
+                                if pcstyle == 'rStyle':
+                                    if pc.get(wdschema + 'val') == 'X-EmphasisStrong':
+                                        tsty.append('strong')
+                                if pcstyle == 'i':
+                                    tsty.append('weak')
+                                if pcstyle == 'u':
+                                    tsty.append('underline')
+                            ttxt = '<hi rend="{}">{}</hi>'.format(' '.join(tsty), ttxt)
+                        s += ttxt
+                    note_el = etree.XML('<note type="endnote">{}</note>'.format(s))
+                    self.endnotes.append(note_el)
+                enindex += 1
         zipdoc.close()
 
     def createxml(self):
-        with open(os.path.join(TEMPLATE_FOLDER, self.template), 'r') as tempstream:
+        template_path = os.path.join(TEMPLATE_FOLDER, self.template)
+        with open(template_path, 'r') as tempstream:
+            if self.debug:
+                print(f"Template file: {template_path}")
             self.xmltemplate = tempstream.read()
             self.metatable = self.worddoc.tables[0] if len(self.worddoc.tables) else False
             if self.metatable:
@@ -252,9 +262,12 @@ class TextConverter:
         xmltext = self.xmltemplate.replace("{Digital Creation Date}", str(date.today()))
         problems_on = False
         tablerows = len(wordtable.rows)
+        problems = []
+        print("Process Metadata Table ... {}".format(tablerows))
         for rwnum in range(0, tablerows):
             try:
                 if wordtable._column_count < 2:
+                    label = wordtable.cell(rwnum, 0).text.strip()
                     logging.warning("Row {} of metadata table has too few cells".format(rwnum))
                     continue
 
@@ -275,9 +288,13 @@ class TextConverter:
                     rowval = wordtable.cell(rwnum, 3).text.strip()
 
                 else:
-                    self.mywarning("Row {} of metadata table has too many ({}) cells. Using first two".format(rwnum))
-                    label = wordtable.cell(rwnum, 0).text.strip()
-                    rowval = wordtable.cell(rwnum, 1).text.strip()
+                    rowcells = wordtable.rows[rwnum].cells
+                    label = wordtable.cell(rwnum, 0).text.strip() if len(rowcells) > 0 else ""
+                    rowval = wordtable.cell(rwnum, 1).text.strip() if len(rowcells) > 1 else label
+                    # self.mywarning("Row {} of metadata table has too many ({}) cells. Using first two".format(rwnum))
+
+                if label == "Text ID":
+                    self.textid = rowval
 
                 # All Uppercase are Headers in the table skip
                 if label.isupper():
@@ -285,17 +302,16 @@ class TextConverter:
                         problems_on = True
                     continue  # Skip labels
                 if problems_on:
-                    if '<encodingDesc>' not in xmltext:
-                        xmltext = xmltext.replace('</fileDesc>',
-                                                    '</fileDesc><encodingDesc><editorialDecl ' +
-                                                    'n="problems"><interpretation n="{}">'.format(label) +
-                                                    '<p>{}</p>'.format(rowval) +
-                                                    '</interpretation></editorialDecl></encodingDesc>')
-                    else:
-                        xmltext = xmltext.replace('</interpretation></editorialDecl>',
-                                                    '</interpretation><interpretation n="{}">'.format(label) +
-                                                    '<p>{}</p>'.format(rowval) +
-                                                    '</interpretation></editorialDecl>')
+                    print("Processing Problems: ", end="")
+                    for cellp in wordtable.cell(rwnum, 0).paragraphs:
+                        problems.append(cellp.text.strip())
+                    if rwnum < tablerows - 1:
+                        continue  # iterate through all the problems which should always be last in the table
+                    print(" Processed {} problems".format(len(problems)))
+                    label = "Problems"   # the string {Problems} should be in template where problems go
+                    problems = [f"<p>{p}</p>" for p in problems]
+                    rowval = "\n".join(problems)
+
                 temppt = label.split(' (')  # some rows have " (if applicable)" or possible some other instruction
 
                 # Normalizing Label
@@ -326,6 +342,8 @@ class TextConverter:
             except TypeError as e:
                 logging.error("Type error in iterating wordtable: {}".format(e))
 
+        # if there are no problems the {problems} needs to be replaced with an empty paragraph.
+        xmltext = xmltext.replace('{Problems}', '<p>No problems</p>')
         self.xmltemplate = re.sub(r'{([^}]+)}', r'<!--\1-->', xmltext)
 
     def convertpara(self, p):
@@ -333,6 +351,12 @@ class TextConverter:
         headmtch = re.match(r'^Heading (?:Tibetan\s*)?(\d+)[\,\s]*(Front|Body|Back)?', style_name)
         if headmtch:
             self.do_header(p, headmtch)
+
+        elif len(self.headstack) == 0:
+            # if there is not yet a headstack then it's notes at beginning of document that should be ignored
+            ptxt = p.text[0:150] if len(p.text) > 150 else p.text
+            print(f"Skipping Paragraph at beginning: {ptxt}")
+            return
 
         elif "List" in style_name:
             self.do_list(p)
@@ -614,10 +638,11 @@ class TextConverter:
             return
         p_el = etree.Element('p')
         # TODO: Shouldn't we just append to last element in headstack? What happens after embedded lists?
-        if self.current_el.tag == 'div':
-            self.current_el.append(p_el)
-        else:
-            self.current_el.addnext(p_el)
+        if self.current_el is not None:
+            if self.current_el.tag == 'div':
+                self.current_el.append(p_el)
+            else:
+                self.current_el.addnext(p_el)
         self.current_el = p_el
 
     def iterate_runs(self, p):
@@ -710,9 +735,9 @@ class TextConverter:
                 new_el = getStyleElement(char_style)
                 if new_el is None:
                     temp_el.text += rtxt
-                    # new_el = etree.Element('s')
-                    # new_comment = etree.Comment("No style definition found for style name: {}".format(char_style))
-                    # new_el.append(new_comment)
+                    if self.debug and char_style not in IGNORABLE_STYLES:
+                        print(f"No style definition found for style name, {char_style}: {rtxt}")
+
                 else:
                     if self.debug:
                         logging.debug('Style element {} => {}'.format(char_style, new_el.tag))
@@ -890,8 +915,8 @@ class TextConverter:
             if mtch:
                 mstype = 'page'
                 msnum = mtch.group(2) + '-' + mtch.group(1)
-            else:
-                logging.warning("No match for milestone parts in {}".format(mstxt))
+            # else:s
+            #    logging.warning("No match for milestone parts in {}".format(mstxt))
         msel = getStyleElement(char_style)
         msel.set('unit', mstype)
         sep = '.' if '.' in msnum else '-'  # Do we need to check for more separators
@@ -951,6 +976,11 @@ class TextConverter:
             anum += 1
         return str(anum)
 
+    def tidyxml(self):
+        empty_resp = self.xmlroot.xpath("//publicationStmt/respStmt/name[@n='agent' and not(text())]/parent::*")
+        for resp in empty_resp:
+            resp.getparent().remove(resp)
+
     def writexml(self):
         # Determine Name for Resulting XML file
         fname = self.current_file.replace('.docx', '.xml')
@@ -967,12 +997,33 @@ class TextConverter:
 
         # Write XML File
         with open(fpth, "wb") as outfile:
-            docType = "<!DOCTYPE TEI.2 SYSTEM \"{}xtib3.dtd\">".format(self.dtdpath)
+            genid = self.textid.replace('-text', '')
+            mtch = re.search(r'-(\d{4})-', genid)
+            fldr = mtch.group(1)[0] if mtch else '0'
+            docType = "<!DOCTYPE TEI.2 SYSTEM \"{0}xtib3.dtd\" [ \n" \
+                "\t<!ENTITY % thlnotent SYSTEM \"{0}catalog-refs.dtd\" > \n" \
+                "\t%thlnotent;\n" \
+                "\t<!ENTITY {1} SYSTEM \"../../{2}/{1}-bib.xml\">\n]>".format(self.dtdpath, genid, fldr)
+
+            # Replace profile desc with entity
+            pdentity = etree.Entity('thdlprofiledesc')
+            pdesc = self.xmlroot.xpath('//profileDesc')[0]
+            pdesc.addprevious(pdentity)
+            pdesc.getparent().remove(pdesc)
+
+            # Add tibble entity
+            tibsrc = etree.XML('<sourceDesc n="tibbibl"></sourceDesc>')
+            tibbibl_ent = etree.Entity(genid)
+            tibsrc.append(tibbibl_ent)
+            docsrc = self.xmlroot.xpath('//sourceDesc')[0]
+            docsrc.tail = "\n"
+            docsrc.addnext(tibsrc)
+
             xmlstring = etree.tostring(self.xmlroot,
-                                        pretty_print=True,
-                                        encoding='utf-8',
-                                        xml_declaration=True,
-                                        doctype=docType)
+                                       pretty_print=True,
+                                       encoding='utf-8',
+                                       xml_declaration=True,
+                                       doctype=docType)
             outfile.write(xmlstring)
 
     #  HELPER METHODS

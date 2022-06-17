@@ -475,7 +475,7 @@ elements = {
 }
 
 
-def getStyleElement(style_name):
+def getStyleElement(style_name, debug=False):
     """
     Returns the XML element object for a particular style name
     :param style_name:
@@ -484,8 +484,8 @@ def getStyleElement(style_name):
     style_name = re.sub(r'\s+', ' ', style_name)  # Normalize spaces in style name
     elemdef = getStyleTagDef(style_name)
     if elemdef is None:
-        if style_name != 'Paragraph Char':
-            print("Character style name {} was not found.".format(style_name))
+        # if style_name != 'Paragraph Char' and debug:
+        #    print("Character style name {} was not found.".format(style_name))
         return None
     elem = etree.Element(elemdef['tag'])
     if 'attributes' in elemdef:

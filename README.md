@@ -1,6 +1,9 @@
-# thl_converter_stack
+# THL Converter Stack
 
 ## About
+
+**Repo Name:** `thl_converter_stack`
+
 This is the refactored converter from Ori's original attempt at https://github.com/thl-texts/thl_converter.git
 It is called "thl_converter_stack" because it uses a headstack to keep track of the current nested DIV
 It also creates a TextConverter class that is the basis of the conversion. Thus, instead of having global
