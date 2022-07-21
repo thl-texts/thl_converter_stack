@@ -5,6 +5,7 @@ The main Word to Text converter for THL-specific TEI texts. Could be inherited b
 import os
 import logging
 import re
+import unicodedata
 import zipfile
 import docx
 from lxml import etree
@@ -14,6 +15,18 @@ from styleelements import getStyleElement, fontSame, getFontElement
 
 TEMPLATE_FOLDER = 'templates'
 IGNORABLE_STYLES = ['Paragraph Char', 'List Bullet Char']
+
+
+def get_lang_by_char(chr):
+    unm = unicodedata.name(chr)
+    if "TIBETAN" in unm:
+        return "tib"
+    if "CHINESE" in unm:
+        return "chi"
+    if "DEVANAGARI" in unm:
+        return "san"
+    return ''
+
 
 class TextConverter:
 
@@ -192,9 +205,15 @@ class TextConverter:
                                     if pc.get(wdschema + 'bidi') == 'bo-CN':
                                         lang = ' lang="tib"'
                             attr = "" if len(tsty) == 0 else ' rend="{}"'.format(' '.join(tsty))
+                            if lang == "":
+                                langcode = get_lang_by_char(ttxt[0])
+                                if len(langcode) > 0:
+                                    lang = ' lang="{}"'.format(langcode)
                             attr += lang
-                            ttxt = '<hi{}>{}</hi>'.format(attr, ttxt)
+                            ttxt = '<hi{}>{}</hi>'.format(attr, ttxt) if len(attr) > 0 else ttxt
                         s += ttxt
+                        # TODO: add regex here to find <hi> with the same rend next to each other and merge them,
+                        #  e.g. <hi lang="tib">ཡོད</hi><hi lang="tib">།</hi>
                     note_el = etree.XML('<note type="footnote">{}<rs>{}</rs></note>'.format(s, plains))
                     self.footnotes.append(note_el)
                 fnindex += 1
