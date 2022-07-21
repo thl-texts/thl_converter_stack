@@ -214,8 +214,17 @@ class TextConverter:
                         s += ttxt
                         # TODO: add regex here to find <hi> with the same rend next to each other and merge them,
                         #  e.g. <hi lang="tib">ཡོད</hi><hi lang="tib">།</hi>
-                    note_el = etree.XML('<note type="footnote">{}<rs>{}</rs></note>'.format(s, plains))
-                    self.footnotes.append(note_el)
+                    nteltxt = '<note type="footnote">{}<rs>{}</rs></note>'.format(s, plains)
+                    try:
+                        note_el = etree.XML(nteltxt.replace('&', '&amp;'))  # convert & to its xml entity
+                        self.footnotes.append(note_el)
+                    except etree.XMLSyntaxError as xe:
+                        # Information if there is a problem creating XML
+                        print("Xml syntax error in creating note: ")
+                        print(xe)
+                        print(f"nt el: {nteltxt}")
+                        print(f"s: {s}")
+                        print(f"plains: {plains}")
                 fnindex += 1
 
         endntfile = 'word/endnotes.xml'
@@ -1030,13 +1039,14 @@ class TextConverter:
             pdesc.addprevious(pdentity)
             pdesc.getparent().remove(pdesc)
 
-            # Add tibble entity
-            tibsrc = etree.XML('<sourceDesc n="tibbibl"></sourceDesc>')
-            tibbibl_ent = etree.Entity(genid)
-            tibsrc.append(tibbibl_ent)
-            docsrc = self.xmlroot.xpath('//sourceDesc')[0]
-            docsrc.tail = "\n"
-            docsrc.addnext(tibsrc)
+            # Add tibble entity if there is a text id
+            if self.textid and genid:
+                tibsrc = etree.XML('<sourceDesc n="tibbibl"></sourceDesc>')
+                tibbibl_ent = etree.Entity(genid)
+                tibsrc.append(tibbibl_ent)
+                docsrc = self.xmlroot.xpath('//sourceDesc')[0]
+                docsrc.tail = "\n"
+                docsrc.addnext(tibsrc)
 
             xmlstring = etree.tostring(self.xmlroot,
                                        pretty_print=True,
