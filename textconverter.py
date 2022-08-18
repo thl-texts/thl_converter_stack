@@ -12,6 +12,7 @@ from lxml import etree
 
 from datetime import date
 from styleelements import getStyleElement, fontSame, getFontElement
+from w3lib.html import replace_entities
 
 TEMPLATE_FOLDER = 'templates'
 IGNORABLE_STYLES = ['Paragraph Char', 'List Bullet Char']
@@ -48,9 +49,12 @@ class TextConverter:
         self.dtdpath = args.dtdpath
         self.debug = args.debug if args.debug else False
         self.worddoc = None
+        self.nsmap = None
         self.metatable = None
-        self.footnotes = []
-        self.endnotes = []
+        self.footnotes = {}
+        self.fncount = 0
+        self.endnotes = {}
+        self.endntcount = 0
         self.xmlroot = None
         self.headstack = []
         self.current_el = None
@@ -58,6 +62,9 @@ class TextConverter:
         self.edsig = ''
         self.chapnum = None
         self.textid = ''
+        self.in_multiline_apparatus = False
+        self.multiline_apparatus_num = 0
+        self.multiline_apparatus_el = None
 
         self.log = args.log
         self.loglevel = logging.DEBUG if self.debug else logging.WARN
@@ -87,6 +94,7 @@ class TextConverter:
             self.current_file = fl
             self.setlog()
             self.convertdoc()
+            self.bodydivcheck()
             self.assignids()
             self.tidyxml()
             self.writexml()
@@ -94,11 +102,18 @@ class TextConverter:
     def convertdoc(self):
         self.current_file_path = os.path.join(self.indir, self.current_file)
         self.worddoc = docx.Document(self.current_file_path)
+        if self.textid == '':
+            mtch = re.search(r"^\S+-\d+", self.current_file)
+            if mtch:
+                self.textid = mtch.group(0)
+        self.nsmap = self.worddoc.element.nsmap
         self.merge_runs()
         self.pre_process_notes()
         self.createxml()
 
-        # TODO: add more conversion code here. Iterate through paras then runs. Using stack method
+        # self.mylog("In self my warning")
+
+        # Iterate through paragraphs
         totalp = len(self.worddoc.paragraphs)
         ct = 0
         in_app = False
@@ -108,21 +123,13 @@ class TextConverter:
             print("\rDoing paragraph {} of {}  ".format(ct, totalp), end="")
             self.pindex = index
             if isinstance(p, docx.text.paragraph.Paragraph):
-                ptxt = p.text
-                if len(ptxt) > 0 and ptxt[0] == '{' and '}' not in ptxt:
-                    logging.info('Multiline apparatus begins: ' + ptxt)
-                    in_app = True
-                if in_app:
-                    app_ps.append(p)
-                    if ptxt[0] == '}':
-                        self.process_multiline_app(app_ps)
-                        logging.info("Multiline apparatus finished: " + ptxt)
-                        in_app = False
-                        apps_ps = []
-                else:
+                # Checks for and processes multiline apparatus returns true if paragraph is processed
+                paragraph_processed = self.process_multiline_app(p)
+                # If not in a multiline apparatus, process paragraph normally
+                if not paragraph_processed:
                     self.convertpara(p)
             else:
-                self.mywarning("Warning: paragraph ({}) is not a docx paragraph cannot convert".format(p))
+                self.mylog("Warning: paragraph ({}) is not a docx paragraph cannot convert".format(p))
         print("")
 
     def merge_runs(self):
@@ -171,69 +178,136 @@ class TextConverter:
 
         # write content of endnotes.xml into self.footnotes[]
         fntfile = 'word/footnotes.xml'
+
         if fntfile in zipdoc.namelist():
             fnotestxt = zipdoc.read('word/footnotes.xml')
             xml_fn_root = etree.fromstring(fnotestxt)
+            nsmap = xml_fn_root.nsmap  # The MS Word namesapce map for the footnote document
+            wns = '{' + nsmap["w"] + '}'  # The string of the particular namespace "w:" used for getting attributes
+
             # To output the footnote XML file from Word uncomment the lines below:
             # with open('./workspace/logs/footnotes-test.xml', 'wb') as xfout:
             #     xfout.write(etree.tostring(xml_fn_root))
-            fnindex = 0
-            fnotes = xml_fn_root.findall('w:footnote', xml_fn_root.nsmap)
-            for f in fnotes:
+
+            fnotes = xml_fn_root.findall('w:footnote', nsmap)
+            for fnindex, f in enumerate(fnotes):
                 if fnindex > 1:  # The first two "footnotes" are the separation and continuation lines
-                    text = f.findall('.//w:t', xml_fn_root.nsmap)
-                    s = ""
-                    plains = ""
-                    wdschema = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
-                    for t in text:
-                        ttxt = t.text
-                        plains += ttxt
-                        prev = t.getprevious()  # This returns <w:rPr> or None
-                        if prev is not None:
-                            tsty = []
-                            lang = ""
-                            for pc in prev.getchildren():
-                                pcstyle = re.sub(r'\{[^\}]+\}', '', pc.tag)
-                                if pcstyle == 'rStyle':
-                                    if pc.get(wdschema + 'val') == 'X-EmphasisStrong':
-                                        tsty.append('strong')
-                                elif pcstyle == 'i':
-                                    tsty.append('weak')
-                                elif pcstyle == 'u':
-                                    tsty.append('underline')
-                                elif pcstyle == 'lang':
-                                    if pc.get(wdschema + 'bidi') == 'bo-CN':
-                                        lang = ' lang="tib"'
-                            attr = "" if len(tsty) == 0 else ' rend="{}"'.format(' '.join(tsty))
-                            if lang == "":
-                                langcode = get_lang_by_char(ttxt[0])
-                                if len(langcode) > 0:
-                                    lang = ' lang="{}"'.format(langcode)
-                            attr += lang
-                            ttxt = '<hi{}>{}</hi>'.format(attr, ttxt) if len(attr) > 0 else ttxt
-                        s += ttxt
-                        # TODO: add regex here to find <hi> with the same rend next to each other and merge them,
-                        #  e.g. <hi lang="tib">ཡོད</hi><hi lang="tib">།</hi>
-                    nteltxt = '<note type="footnote">{}<rs>{}</rs></note>'.format(s, plains)
-                    try:
-                        note_el = etree.XML(nteltxt.replace('&', '&amp;'))  # convert & to its xml entity
-                        self.footnotes.append(note_el)
-                    except etree.XMLSyntaxError as xe:
-                        # Information if there is a problem creating XML
-                        print("Xml syntax error in creating note: ")
-                        print(xe)
-                        print(f"nt el: {nteltxt}")
-                        print(f"s: {s}")
-                        print(f"plains: {plains}")
-                fnindex += 1
+                    # Footnote object saved in footnote dictionary of class
+                    fno = {
+                        'num': '',
+                        'is_annotation': False,
+                        'ref': None,
+                        'prev_el': None,
+                        'runs': None,
+                        'text': '',
+                        'markup': ''
+                    }
+                    if len(f.keys()) > 0:
+                        fnum = f.get(f'{wns}id')
+                        fno['ref'] = self.worddoc.element.xpath(f'//w:footnoteReference[@w:id="{fnum}"]')
+                        fno['num'] = fnum
+                        if len(fno['ref']) > 0:
+                            fno['ref'] = fno['ref'][0]
+                            fno['prev_el'] = fno['ref'].getparent().getprevious()
+                            fno['is_annotation'] = fno['prev_el'].text and fno['prev_el'].text[-1] == '}'
+
+                    # All runs in footnote. Footnote is a single wrapper element the "r" elements are runs
+                    fno['runs'] = f[0].findall("w:r", nsmap)
+                    # Iterate through runs in the footnote
+                    for fnr in fno['runs']:
+                        # Find all the text elements in the run (usually only 1, but this is just in case)
+                        for fntxt in fnr.findall("w:t", nsmap):
+                            fno['text'] += fntxt.text  # add to the fnot plain text property
+                            # See if there is a previous Word Style element with a style name for this run
+                            prevel = fntxt.getprevious()
+                            if prevel is not None:
+                                stylel = prevel.findall('w:rStyle', nsmap)
+                                # If there is get the style name from it val attribute
+                                if len(stylel) > 0:
+                                    stylel = stylel[0]
+                                    stylename = stylel.get(f'{wns}val')
+                                    stylel = getStyleElement(stylename)
+                                    # If it's a legit style, create a element with this text
+                                    if stylel is not None:
+                                        stylel.text = fntxt.text
+                                        # Convert element to string and add to markup property
+                                        fno['markup'] += etree.tostring(stylel).decode('utf-8')
+                                    else:
+                                        # If not a legit style, just add the text of the run, diretctly to the markup;
+                                        fno['markup'] += fntxt.text
+                                else:
+                                    fno['markup'] += fntxt.text
+                    # Warn if we can't find the footnote reference number
+                    if not fno['num']:
+                        pretext = fno['text'][:25]
+                        print(f"\n\tNo footnote number found for note index {fnindex}, beginning with “{pretext}”")
+                    else:
+                        fnkey = fno['num']
+                        if type(fnkey) == str and type(self.footnotes) == dict:
+                            self.footnotes[fnkey] = fno
+
+                    # Old Footnote code for reference (july 29, 2022)
+                    # s = ""
+                    # plains = ""
+                    # wdschema = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+                    # for t in text:
+                    #     ttxt = t.text
+                    #     plains += ttxt
+                    #     prev = t.getprevious()  # This returns <w:rPr> or None
+                    #     if prev is not None:
+                    #         tsty = []
+                    #         lang = ""
+                    #         for pc in prev.getchildren():
+                    #             pcstyle = re.sub(r'\{[^\}]+\}', '', pc.tag)
+                    #             if pcstyle == 'rStyle':
+                    #                 if pc.get(wdschema + 'val') == 'X-EmphasisStrong':
+                    #                     tsty.append('strong')
+                    #             elif pcstyle == 'i':
+                    #                 tsty.append('weak')
+                    #             elif pcstyle == 'u':
+                    #                 tsty.append('underline')
+                    #             elif pcstyle == 'lang':
+                    #                 if pc.get(wdschema + 'bidi') == 'bo-CN':
+                    #                     lang = ' lang="tib"'
+                    #         attr = "" if len(tsty) == 0 else ' rend="{}"'.format(' '.join(tsty))
+                    #         if lang == "":
+                    #             langcode = get_lang_by_char(ttxt[0])
+                    #             if len(langcode) > 0:
+                    #                 lang = ' lang="{}"'.format(langcode)
+                    #         attr += lang
+                    #         ttxt = '<hi{}>{}</hi>'.format(attr, ttxt) if len(attr) > 0 else ttxt
+                    #     s += ttxt
+                    # TODO: add regex here to find <hi> with the same rend next to each other and merge them,
+                    #  e.g. <hi lang="tib">ཡོད</hi><hi lang="tib">།</hi>
+                    # Old footnote markup for refence
+                    # nteltxt = f'<note type="footnote" n="{fn_num}">{s}<rs>{plains}</rs></note>'
+                    # try:
+                    #     note_el = etree.XML(nteltxt.replace('&', '&amp;'))  # convert & to its xml entity
+                    #     self.footnotes[fn_num] = note_el
+                    # except etree.XMLSyntaxError as xe:
+                    #     # Information if there is a problem creating XML
+                    #     print("Xml syntax error in creating note: ")
+                    #     print(xe)
+                    #     print(f"nt el: {nteltxt}")
+                    #     print(f"s: {s}")
+                    #     print(f"plains: {plains}")
+                # fnindex += 1
 
         endntfile = 'word/endnotes.xml'
         if endntfile in zipdoc.namelist():
             # write content of endnotes.xml into self.endnotes[]
             xml_content = zipdoc.read(endntfile)
             xml_en_root = etree.fromstring(xml_content)
+
+            # To output the endnote XML file from Word uncomment the lines below:
+            with open('./workspace/logs/endnotes-test.xml', 'wb') as xfout:
+                xfout.write(etree.tostring(xml_en_root))
+
             enindex = 0
             enotes = xml_en_root.findall('w:endnote', xml_en_root.nsmap)
+            if len(enotes) > 2:
+                self.mylog("There are endnotes! Need to update endnote processing code!")
+
             for f in enotes:
                 if enindex > 1:
                     text = f.findall('.//w:t', xml_en_root.nsmap)
@@ -259,12 +333,14 @@ class TextConverter:
                     self.endnotes.append(note_el)
                 enindex += 1
         zipdoc.close()
+        self.fncount = len(self.footnotes)
+        self.endntcount = len(self.endnotes)
 
     def createxml(self):
         template_path = os.path.join(TEMPLATE_FOLDER, self.template)
         with open(template_path, 'r') as tempstream:
             if self.debug:
-                print(f"Template file: {template_path}")
+                self.mylog(f"Template file: {template_path}")
             self.xmltemplate = tempstream.read()
             self.metatable = self.worddoc.tables[0] if len(self.worddoc.tables) else False
             if self.metatable:
@@ -306,7 +382,7 @@ class TextConverter:
                 elif wordtable._column_count == 3:
                     label = wordtable.cell(rwnum, 0).text.strip()
                     rowval = wordtable.cell(rwnum, 1).text.strip()
-                    self.mywarning("Notice: Not handling third column of row {}!".format(rwnum))
+                    self.mylog("Notice: Not handling third column of row {}!".format(rwnum))
 
                 elif wordtable._column_count == 4 and wordtable.cell(rwnum, 0).text == wordtable.cell(rwnum, 2).text:
                     # Not giving warning because this seems to be a Word or pydoc weirdness
@@ -319,7 +395,7 @@ class TextConverter:
                     rowcells = wordtable.rows[rwnum].cells
                     label = wordtable.cell(rwnum, 0).text.strip() if len(rowcells) > 0 else ""
                     rowval = wordtable.cell(rwnum, 1).text.strip() if len(rowcells) > 1 else label
-                    # self.mywarning("Row {} of metadata table has too many ({}) cells. Using first two".format(rwnum))
+                    # self.mylog("Row {} of metadata table has too many ({}) cells. Using first two".format(rwnum))
 
                 if label == "Text ID":
                     self.textid = rowval
@@ -370,7 +446,13 @@ class TextConverter:
             except TypeError as e:
                 logging.error("Type error in iterating wordtable: {}".format(e))
 
-        # if there are no problems the {problems} needs to be replaced with an empty paragraph.
+        # Add text ID if necessary and in current file name
+        if self.current_file:
+            res = re.search(r'^(\w+-\d+)-text', self.current_file)
+            if res:
+                xmltext = xmltext.replace('{Text ID}', res.group(1))
+
+        # if there are no problems (i.e. the string {problems} is still in markup, then replace with an empty paragraph.
         xmltext = xmltext.replace('{Problems}', '<p>No problems</p>')
         self.xmltemplate = re.sub(r'{([^}]+)}', r'<!--\1-->', xmltext)
 
@@ -383,7 +465,7 @@ class TextConverter:
         elif len(self.headstack) == 0:
             # if there is not yet a headstack then it's notes at beginning of document that should be ignored
             ptxt = p.text[0:150] if len(p.text) > 150 else p.text
-            print(f"Skipping Paragraph at beginning: {ptxt}")
+            self.mylog(f"Skipping Paragraph at beginning: {ptxt}")
             return
 
         elif "List" in style_name:
@@ -406,7 +488,7 @@ class TextConverter:
         else:
             if not self.is_reg_p(style_name):
                 msg = "\n\tStyle {} defaulting to paragraph".format(style_name)
-                self.mywarning(msg)
+                self.mylog(msg)
             self.reset_current_el()
             self.do_paragraph(p)
 
@@ -440,7 +522,7 @@ class TextConverter:
             if hlevel > currlevel:
                 # if new level is higher than the current level just add it to current
                 if hlevel - currlevel > 1:
-                    self.mywarning("Warning: Heading level skipped for {}".format(style_name, p.text))
+                    self.mylog("Warning: Heading level skipped for {}".format(style_name, p.text))
                 self.headstack[-1].append(hdiv)  # append the hdiv to the previous one
                 self.headstack.append(hdiv)      # add the hdiv to the stack
             # if it's the same level as current
@@ -486,7 +568,7 @@ class TextConverter:
         # Different Alternatives
         if not prev_num:  # new non-embeded list
             if my_num and int(my_num) > 1:
-                self.mywarning("List level {} added when not in list".format(my_num))
+                self.mylog("List level {} added when not in list".format(my_num))
             # Add list after current element and make it current
             self.current_el.addnext(listel)
             self.current_el = listel.find('item')
@@ -496,7 +578,7 @@ class TextConverter:
             prev_num = int(prev_num)
             if my_num > prev_num:  # Adding/Embedding a new level of list
                 if my_num > prev_num + 1:
-                    self.mywarning("Skipping list Level: inserting {} at level {}".format(my_num, prev_num))
+                    self.mylog("Skipping list Level: inserting {} at level {}".format(my_num, prev_num))
                 # Append the itemlist el to the current list
                 self.current_el.addnext(itemlistel)
                 self.current_el = itemlistel.find('list/item')
@@ -514,7 +596,7 @@ class TextConverter:
                         if listel.tag == 'list':
                             lvl -= 1
                 except AttributeError:
-                    self.mywarning("No iterancestors() method for current list element (text: {}). " +
+                    self.mylog("No iterancestors() method for current list element (text: {}). " +
                                    "Current Element Class: {}".format(p.text, self.current_el.__class__.__name__))
                 listel.append(itemel)
                 self.current_el = itemel
@@ -523,6 +605,7 @@ class TextConverter:
                 self.current_el = listel.find('item')
 
     def do_verse(self, p):
+        # TODO: Throw warning when a Verse2 is found without a preceding verse1 (maybe interpret it as verse1)
         my_style = p.style.name
         prev_style = self.get_previous_p(True)  # TODO: Check if current style is same (except number) with previous
         is_cite = True if 'citation' in my_style.lower() else False
@@ -673,7 +756,7 @@ class TextConverter:
                 self.current_el.addnext(p_el)
         self.current_el = p_el
 
-    def iterate_runs(self, p):
+    def iterate_runs(self, p, skip=0):
         '''
         Populates a paragraph level element with its runs properly marked up (these are character level styles)
         Creates a <temp> element to contain the inner XML structure of the paragraph level element
@@ -683,6 +766,7 @@ class TextConverter:
         [In old converter this was iterateRange (the interateRuns function was not called)]
 
         :param p:
+        :param skip: (int) number of runs to skip before beginning processing (used for multiline apparatus)
         :return:
         '''
         last_run_style = ''
@@ -695,8 +779,8 @@ class TextConverter:
         if temp_el.text is None:
             temp_el.text = ""
 
-        for run in p.runs:
-            if run is None:
+        for rct, run in enumerate(p.runs):
+            if run is None or rct < skip:
                 continue
             rtxt = run.text
             if elem is not None and elem.text is None:
@@ -721,35 +805,45 @@ class TextConverter:
                     temp_el.text += rtxt
                 else:
                     elem.tail += rtxt
+            # Endnotes
+            elif "endnote" in char_style.lower():
+                # TODO: Deal with Endnotes
+                self.mylog("\n\tNEED TO DEAL WITH ENDNOTES!!!")
+
             # Footnotes
-            elif "footnote" in char_style.lower() or "endnote" in char_style.lower():
-                # logging.warning("!!! Must deal with critical edition notes !!!")
-                note = self.endnotes.pop(0) if "endnote" in char_style.lower() else self.footnotes.pop(0)
-                if elem is None and len(temp_el.getchildren()) > 0:
-                    elem = temp_el.getchildren()[-1]
-                if elem is not None:
-                    back_text = elem.tail if elem.tail and len(elem.tail) > 0 else elem.text
-                else:
-                    back_text = temp_el.text
-                reading = self.process_critical(note, back_text)
-                if not reading:
-                    rs = note.find('rs')
-                    if isinstance(rs, etree._Element):
-                        note.remove(rs)
-                    temp_el.append(note)
-                    elem = note
-                elif isinstance(elem, etree._Element):
-                    if elem.tag != 'milestone' and (elem.tail is None or len(elem.tail) == 0):
-                        elem.text = reading['backtext']
-                        elem.append(reading['app'])
+            elif "footnote" in char_style.lower():
+                fnnum, note = self.getFootnoteFromRefRun(run)
+
+                if not note:
+                    self.mylog(f"\n\tCould not find footnote object for {fnnum}")
+                    return
+
+                if note['is_annotation']:
+                    if elem is None and len(temp_el.getchildren()) > 0:
+                        elem = temp_el.getchildren()[-1]
+                    if elem is not None:
+                        back_text = elem.tail if elem.tail and len(elem.tail) > 0 else elem.text
                     else:
-                        elem.tail = reading['backtext']
+                        back_text = temp_el.text
+                    # TODO: Fix the process_critical to use the note object
+                    reading = self.process_critical(note, back_text)
+                    if isinstance(elem, etree._Element):
+                        if elem.tag != 'milestone' and (elem.tail is None or len(elem.tail) == 0):
+                            elem.text = reading['backtext']
+                            elem.append(reading['app'])
+                        else:
+                            elem.tail = reading['backtext']
+                            temp_el.append(reading['app'])
+                            elem = reading['app']
+                    else:
+                        temp_el.text = reading['backtext']
                         temp_el.append(reading['app'])
                         elem = reading['app']
-                else:
-                    temp_el.text = reading['backtext']
-                    temp_el.append(reading['app'])
-                    elem = reading['app']
+                else:   # Other note is not annotation but regular text
+                    note_mu = note['markup']
+                    note_mu = etree.XML(f'<note type="footnote" n="{fnnum}">{note_mu}</note>')
+                    temp_el.append(note_mu)
+                    elem = note_mu
 
             # Milestones
             elif "Page Number" in char_style or "Line Number" in char_style:
@@ -764,7 +858,13 @@ class TextConverter:
                 if new_el is None:
                     temp_el.text += rtxt
                     if self.debug and char_style not in IGNORABLE_STYLES:
-                        print(f"No style definition found for style name, {char_style}: {rtxt}")
+                        outrtxt = rtxt.strip()
+                        pstart = p.runs[0].text if len(p.runs) > 0 else p.text
+                        if len(pstart) > 25:
+                            pstart = pstart[0:25]
+                        msg = f"\n\tNo style definition found for style name, {char_style}: {outrtxt}\n" \
+                              f"\tParagraph beginning with: “{pstart}”..."
+                        self.mylog(msg)
 
                 else:
                     if self.debug:
@@ -779,10 +879,10 @@ class TextConverter:
         ### End of iterating runs ###
 
         if self.current_el is None:
-            print('current el is none')  # Should never get here
+            self.mylog('current el is none') # Should never get here
 
         # Copy temp_el contents to current_el depending on whether it has children or not
-        if self.current_el.tag in ['lb', 'pb', 'milestone']:
+        if self.current_el.tag in ['anchor', 'lb', 'pb', 'milestone']:
             empty_el = self.current_el
             for tmpchld in temp_el.getchildren():
                 self.current_el.addnext(tmpchld)
@@ -815,47 +915,52 @@ class TextConverter:
         '''
         Processes footnotes for critical edition with alternate readings from other editions
 
-        :param note:
-        :param bcktxt:
+        :param note: the note object created for this not during pre_process_notes
+        :param bcktxt: the text preceding the note reference containing the lemma in braces
         :return:
         '''
         reading = False
         if len(bcktxt) > 0:
             if bcktxt[-1] == '}':
                 cestind = bcktxt.rfind('{')
-                if cestind > -1:
-                    reading = {}
-                    lem = bcktxt[cestind + 1:len(bcktxt) - 1].strip()
-                    reading['backtext'] = bcktxt[0:cestind]
-                    lemed = self.edsig if self.edsig and self.edsig != '' else 'base'
-                    lempg = ''
-                    notedata = TextConverter.process_critical_note(note)
-                    if notedata['lem']:
-                        lemed = notedata['lem']['edsigs']
-                        lempg = ' n=""'.format(notedata['lem']['edpgs'])
+                reading = {}
+                lem = bcktxt[cestind + 1:len(bcktxt) - 1].strip() if cestind > -1 else "FIX"
+                reading['backtext'] = bcktxt[0:cestind]
+                lemed = self.edsig if self.edsig and self.edsig != '' else 'base'
+                lempg = ''
+                notedata = TextConverter.process_critical_note(note)
+                if notedata['lem']:
+                    lemed = notedata['lem']['edsigs']
+                    lempg = ' n=""'.format(notedata['lem']['edpgs'])
 
-                    app = '<app><lem wit="{}"{}>{}</lem>'.format(lemed, lempg, lem)
-                    for vrnt in notedata['variants']:
-                        natt = ''
-                        if len(vrnt['edpgs']) > 0:
-                            natt = ' n="{}"'.format(vrnt['edpgs'])
-                        if vrnt['pref']:
-                            natt += ' rend="pref"'
-                        vartxt = lem if vrnt['txt'] == '' else vrnt['txt']
-                        if 'omit' in vartxt:
-                            app += '<rdg wit="{}"{} />'.format(vrnt['edsigs'], natt)
-                        else:
-                            app += '<rdg wit="{}"{}>{}</rdg>'.format(vrnt['edsigs'], natt, vartxt)
-                    app += '</app>'
-                    reading['app'] = etree.XML(app)
-                else:
-                    self.mywarning("\n\tFootnote follows close brace as for apparatus, but no preceding open brace " +
-                                    "found: {}\n\tNote: {}".format(bcktxt, etree.tostring(note, encoding='unicode')))
+                app = f'<app><lem wit="{lemed}"{lempg}>{lem}</lem>'
+                for vrnt in notedata['variants']:
+                    natt = ''
+                    edpgs = vrnt['edpgs']
+                    edsigs = vrnt['edsigs']
+                    if len(vrnt['edpgs']) > 0:
+                        natt = f' n="{edpgs}"'
+                    if vrnt['pref']:
+                        natt += ' rend="pref"'
+                    vartxt = lem if vrnt['txt'] == '' else vrnt['txt']
+                    if 'omit' in vartxt:
+                        app += f'<rdg wit="{edsigs}"{natt} />'
+                    else:
+                        app += f'<rdg wit="{edsigs}"{natt}>{vartxt}</rdg>'
+                app += '</app>'
+                reading['app'] = etree.XML(app)
+                if lem == "FIX":
+                    ntnumb = note['num']
+                    nteltxt = note['text']
+                    self.mylog(f"\n\t“FIX” Footnote {ntnumb} follows close brace as for apparatus, "
+                                   f"but no preceding open brace detected: "
+                                   f"\n\tWord before note: “{bcktxt}”"
+                                   f"\n\tNote: {nteltxt}")
         return reading
 
     @staticmethod
     def process_critical_note(anote):
-        notepts = anote.find('rs').text.split(';')
+        notepts = anote['text'].split(';')
         notedata = {
             'lem': False,
             'variants': []
@@ -877,6 +982,7 @@ class TextConverter:
             edsigs = ' '.join(edsigs)
             edpgs = ' '.join(edpgs)
 
+            # if editions listed without a reading text, they are the lemma sources
             rdgtxt = rpts[1] if len(rpts) > 1 else False
             if not rdgtxt:
                 notedata['lem'] = {
@@ -892,7 +998,64 @@ class TextConverter:
                 })
         return notedata
 
-    def process_multiline_app(self, app_ps):
+    def process_multiline_app(self, p):
+        """
+        Processes multi paragraph apparatus by surrounding them in two empty tags with corresponding IDs:
+                <addSpan id="span1-open" to="span1-close" rend="apparatus" n="Dg Ab"/>
+                  (More markup here)
+                <anchor id="span1-close"  corresp="span1-open" rend="apparatus"/>
+
+        :param p:
+        :return:
+        """
+        paragraph_processed = False
+        ptxt = p.text
+        # Detect if there's a multiline apparatus and begin the processing
+        if len(ptxt) > 0 and ptxt[0] == '{' and '}' not in ptxt:
+            self.mylog('Multiline apparatus begins: ' + ptxt)
+            p.runs[0].text = p.runs[0].text[1:]
+            self.in_multiline_apparatus = True
+            self.multiline_apparatus_num += 1
+            self.multiline_apparatus_el = etree.XML(f'<addSpan id="span{self.multiline_apparatus_num}-open"'
+                                                    f' rend="apparatus" ></addSpan>')
+            if self.current_el is not None:
+                if self.current_el.tag == 'div':
+                    self.current_el.append(self.multiline_apparatus_el)
+                else:
+                    self.current_el.addnext(self.multiline_apparatus_el)
+            self.current_el = self.multiline_apparatus_el
+
+        # Process paragraphs within a multiline appratus
+        elif self.in_multiline_apparatus:
+            if ptxt[0] == '}':  # closing brace must be first character in line
+                self.mylog("Multiline apparatus finished: " + ptxt)
+                paragraph_processed = True  # This returns true to prevent further processing of this paragraph
+                srcs = []
+                if p.runs[1].style.name == 'footnote reference':
+                    nnum, note = self.getFootnoteFromRefRun(p.runs[1])
+                    srcs = [pt.strip() for pt in note['text'].split(',')]
+                else:
+                    self.mylog("Closing brace for multi-line apparatus is not followed by footnote")
+                addSpanID = self.multiline_apparatus_el.get('id')
+                anchorID = f"span{self.multiline_apparatus_num}-close"
+                srcs = ' '.join(srcs)
+                self.multiline_apparatus_el.set('n', srcs)
+                self.multiline_apparatus_el.set('to', anchorID)
+                closeel = etree.XML(f'<anchor id="{anchorID}"  corresp="{addSpanID}" '
+                                    f'rend="apparatus" ></anchor>')
+                self.current_el.addnext(closeel)
+                pfollowing = etree.XML('<p></p>')
+                closeel.addnext(pfollowing)
+                self.current_el = pfollowing
+                self.multiline_apparatus_el = None
+                self.in_multiline_apparatus = False  # though we are no longer in the mla
+                self.iterate_runs(p, 2)  # Process remaining runs in this paragraph
+
+        return paragraph_processed  # if this is false, the paragraph is processed as normal above
+
+        # TODO: Deal with multiline apparatus
+
+        # Blocked from getting here
         orig_current_el = self.current_el
         app_el = etree.XML('<p><app><rdg></rdg></app></p>')
         self.current_el = app_el.find('app').find('rdg')
@@ -971,24 +1134,59 @@ class TextConverter:
             else:
                 self.current_el = children[-1]
 
+    def bodydivcheck(self):
+        """
+        This function ensures that the content of the body is wrapped in a chapter div for situations where
+        there are not Header 1s in the document
+
+        :return:
+        """
+        print("\rChecking body for chapter divs")
+        bdivs = self.xmlroot.xpath('/*//text/body/div[@n="1"]')
+        if len(bdivs) == 0:
+            bd = self.xmlroot.xpath('/*//text/body')[0]
+            bdchildren = bd.getchildren()
+            div = etree.XML('<div n="1" id="b1"><head><num>2.1.</num> གཞུང་།</head></div>')
+            bd.append(div)
+            for bdchild in bdchildren:
+                if bdchild.tag != 'head':
+                    div.append(bdchild)
+
     def assignids(self):
         print("\rAssigning IDs");
         divs = self.xmlroot.xpath('/*//text//div')
         for divel in divs:
-            ancids = list(self.getSiblingPos(divel))
-            textpt = ''  # To store the a/b/c for front, body or back
-            for anc in divel.iterancestors():  # Iterates ancestors in reverse from current element up to TEI.2
-                ancid = self.getSiblingPos(anc)  # returns number for div or a, b, c for front body or back
-                if ancid.isnumeric():
-                    ancids.append(ancid)
-                else:
-                    txtpt = ancid
-                    break   # break after front body or back to not count text or TEI.2
-            ancids.reverse()
-            if self.chapnum:
-                ancids[0] = self.chapnum
-            myid = txtpt + '-'.join(ancids)
-            divel.set('id', myid)
+            headtxt = divel.xpath('./head[1]/num/text()')
+            if headtxt:
+                headtxt = headtxt[0]
+                headlist = headtxt.split('.')
+                mainsect = TextConverter.section_trans(headlist.pop(0))  # convert first number to letter
+                headlist[0] = mainsect + headlist[0]
+                myid = '-'.join(headlist)
+                myid = myid.rstrip('-')  # remove any trailing dash
+                divel.set('id', myid)
+            else:
+                head = divel.xpath('./head')
+                head = etree.tostring(head[0]).decode('utf-8') if head else '???'
+                head = "No num element in " + replace_entities(head)
+                self.mylog(head)
+
+        # Original code idea was to get the actual ancestor positions and use those, but his was problematic
+        # for divel in divs:
+        #     ancids = list(self.getSiblingPos(divel))
+        #     textpt = ''  # To store the a/b/c for front, body or back
+        #     for anc in divel.iterancestors():  # Iterates ancestors in reverse from current element up to TEI.2
+        #         ancid = self.getSiblingPos(anc)  # returns number for div or a, b, c for front body or back
+        #         if ancid.isnumeric():
+        #             ancids.append(ancid)
+        #         else:
+        #             txtpt = ancid
+        #             break   # break after front body or back to not count text or TEI.2
+        #     ancids.reverse()
+        #     if self.chapnum:
+        #         ancids[0] = self.chapnum
+        #     myid = txtpt + '-'.join(ancids)
+        #     divel.set('id', myid)
 
     @staticmethod
     def getSiblingPos(el):
@@ -1003,6 +1201,21 @@ class TextConverter:
         for sib in el.itersiblings('div', preceding=True):
             anum += 1
         return str(anum)
+
+    @staticmethod
+    def section_trans(fbbid):
+        """
+        Translates a front, body, or back number (1,2,3) to the appropriate letter (a, b, c) or vice versa
+        :param fbbid:
+        :return:
+        """
+        trans = ['', 'a', 'b', 'c']
+        fbbid = int(fbbid) if isinstance(fbbid, str) and fbbid.isnumeric() else fbbid
+        if isinstance(fbbid, str) and fbbid in trans:
+            return trans.index(id)
+        if isinstance(fbbid, int) and 0 < fbbid < 4:
+            return trans[fbbid]
+        return fbbid
 
     def tidyxml(self):
         empty_resp = self.xmlroot.xpath("//publicationStmt/respStmt/name[@n='agent' and not(text())]/parent::*")
@@ -1044,9 +1257,9 @@ class TextConverter:
                 tibsrc = etree.XML('<sourceDesc n="tibbibl"></sourceDesc>')
                 tibbibl_ent = etree.Entity(genid)
                 tibsrc.append(tibbibl_ent)
+                tibsrc.tail = "\n"
                 docsrc = self.xmlroot.xpath('//sourceDesc')[0]
-                docsrc.tail = "\n"
-                docsrc.addnext(tibsrc)
+                docsrc.addprevious(tibsrc)
 
             xmlstring = etree.tostring(self.xmlroot,
                                        pretty_print=True,
@@ -1068,7 +1281,7 @@ class TextConverter:
 
     # STATIC HELPER METHODS
     @staticmethod
-    def mywarning(msg):
+    def mylog(msg):
         print(msg)
         logging.warning(msg)
 
@@ -1085,6 +1298,23 @@ class TextConverter:
         if "Paragraph" not in style_name and "Outline" not in style_name and "Normal" not in style_name:
             return False
         return True
+
+    def getFootnoteFromRefRun(self, run):
+        # Get the footnote number from the run containing the "footnote reference"
+        # Second element in footnote ref container has the number/id: <w:footnoteReference w:id="2"/>
+        # The full attribute is {http://schemas.openxmlformats.org/wordprocessingml/2006/main}id
+        # Easier just to pop the first key from the attribute dictionary of that element
+        runel = run.element
+        fnref = runel[1]
+        fnnum = ""
+        note = None
+
+        if len(fnref.keys()) > 0:
+            idkey = '{' + self.nsmap['w'] + '}id'
+            fnnum = fnref.get(idkey)
+            note = self.footnotes[fnnum]
+
+        return fnnum, note
 
 
 class ConversionException(Exception):
