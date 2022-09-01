@@ -209,7 +209,12 @@ class TextConverter:
                         if len(fno['ref']) > 0:
                             fno['ref'] = fno['ref'][0]
                             fno['prev_el'] = fno['ref'].getparent().getprevious()
-                            fno['is_annotation'] = fno['prev_el'].text and fno['prev_el'].text[-1] == '}'
+                            loopct = 0
+                            while fno['prev_el'] is not None and fno['prev_el'].tag != f'{wns}r' and loopct < 20:
+                                loopct += 1
+                                fno['prev_el'] = fno['prev_el'].getprevious()
+                            if fno['prev_el'] is not None:
+                                fno['is_annotation'] = fno['prev_el'].text and fno['prev_el'].text[-1] == '}'
 
                     # All runs in footnote. Footnote is a single wrapper element the "r" elements are runs
                     fno['runs'] = f[0].findall("w:r", nsmap)
@@ -235,7 +240,7 @@ class TextConverter:
                                     else:
                                         # If not a legit style, just add the text of the run, diretctly to the markup;
                                         fno['markup'] += fntxt.text
-                                else:
+                                else:  # This led to just a dash in the markup whereas text was more robust
                                     fno['markup'] += fntxt.text
                     # Warn if we can't find the footnote reference number
                     if not fno['num']:
@@ -246,6 +251,8 @@ class TextConverter:
                         if type(fnkey) == str and type(self.footnotes) == dict:
                             self.footnotes[fnkey] = fno
 
+                    if fnum == '12':
+                        a3 = 0
                     # Old Footnote code for reference (july 29, 2022)
                     # s = ""
                     # plains = ""
@@ -515,9 +522,7 @@ class TextConverter:
         else:
             # Otherwise we are already in front, body, or back, so create div
             currlevel = len(self.headstack) - 1  # subtract one bec. div 0 is at top of stack
-            # TODO: Need to assign ids to divs "a1", "b4", "c2" etc.
-            # TODO: need to parse the p element in case there is internal markup to put in head
-            hdiv = etree.XML('<div n="{}"><head></head></div>'.format(hlevel))
+            hdiv = etree.XML(f'<div n="{hlevel}"><head></head></div>')
             # if it's the next level deeper
             if hlevel > currlevel:
                 # if new level is higher than the current level just add it to current
@@ -531,7 +536,7 @@ class TextConverter:
                     self.headstack[-1].addnext(hdiv)
                     self.headstack[-1] = hdiv
                 else:
-                    errmsg = "Headstack is empty when adding div ({})\n".format(hdiv.text)
+                    errmsg = f"Headstack is empty when adding div ({hdiv.text})\n"
                     errmsg += "Make sure Body Heading0 is present."
                     raise ConversionException(errmsg)
 
@@ -770,6 +775,7 @@ class TextConverter:
         :return:
         '''
         last_run_style = ''
+        style_before_footnote = ''
         temp_el = etree.Element('temp')  # temp element to put xml element objects in
         elem = None
         if len(p.runs) == 0:
@@ -793,6 +799,7 @@ class TextConverter:
 
             char_style = run.style.name
             is_new_style = True if char_style != last_run_style else False
+
             # Default Paragraph Font
             if not char_style or char_style == "" or "Default Paragraph Font" in char_style:
                 # May be in Default Font but have bold or italic ste
@@ -812,8 +819,10 @@ class TextConverter:
 
             # Footnotes
             elif "footnote" in char_style.lower():
+                style_before_footnote = last_run_style
                 fnnum, note = self.getFootnoteFromRefRun(run)
-
+                if fnnum == '12':
+                    b4=3
                 if not note:
                     self.mylog(f"\n\tCould not find footnote object for {fnnum}")
                     return
@@ -840,7 +849,9 @@ class TextConverter:
                         temp_el.append(reading['app'])
                         elem = reading['app']
                 else:   # Other note is not annotation but regular text
-                    note_mu = note['markup']
+                    note_mu = note['markup'] if note['markup'] else note['text']
+                    # if len(note['markup']) < len(note['text']):
+                    #    note_mu = note['text']
                     note_mu = etree.XML(f'<note type="footnote" n="{fnnum}">{note_mu}</note>')
                     temp_el.append(note_mu)
                     elem = note_mu
@@ -876,6 +887,7 @@ class TextConverter:
                 elem.text += rtxt
 
             last_run_style = char_style
+
         ### End of iterating runs ###
 
         if self.current_el is None:
@@ -932,8 +944,8 @@ class TextConverter:
                 if notedata['lem']:
                     lemed = notedata['lem']['edsigs']
                     lempg = ' n=""'.format(notedata['lem']['edpgs'])
-
-                app = f'<app><lem wit="{lemed}"{lempg}>{lem}</lem>'
+                ntnum = note['num']
+                app = f'<app n="nt{ntnum}"><lem wit="{lemed}"{lempg}>{lem}</lem>'
                 for vrnt in notedata['variants']:
                     natt = ''
                     edpgs = vrnt['edpgs']
