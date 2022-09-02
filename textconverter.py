@@ -1251,6 +1251,8 @@ class TextConverter:
         # Write XML File
         with open(fpth, "wb") as outfile:
             genid = self.textid.replace('-text', '')
+            genid = re.sub(r'(-\d{4})-\d+', r'\1', genid)  # remove text document sub number for e.g. lccw-0353-1.docx
+            # Calculate bibl folder (first number of text id number)
             mtch = re.search(r'-(\d{4})-', genid)
             fldr = mtch.group(1)[0] if mtch else '0'
             docType = "<!DOCTYPE TEI.2 SYSTEM \"{0}xtib3.dtd\" [ \n" \
