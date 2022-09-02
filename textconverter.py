@@ -7,6 +7,7 @@ import logging
 import re
 import unicodedata
 import zipfile
+import html
 import docx
 from lxml import etree
 
@@ -251,8 +252,6 @@ class TextConverter:
                         if type(fnkey) == str and type(self.footnotes) == dict:
                             self.footnotes[fnkey] = fno
 
-                    if fnum == '12':
-                        a3 = 0
                     # Old Footnote code for reference (july 29, 2022)
                     # s = ""
                     # plains = ""
@@ -821,8 +820,6 @@ class TextConverter:
             elif "footnote" in char_style.lower():
                 style_before_footnote = last_run_style
                 fnnum, note = self.getFootnoteFromRefRun(run)
-                if fnnum == '12':
-                    b4=3
                 if not note:
                     self.mylog(f"\n\tCould not find footnote object for {fnnum}")
                     return
@@ -834,7 +831,7 @@ class TextConverter:
                         back_text = elem.tail if elem.tail and len(elem.tail) > 0 else elem.text
                     else:
                         back_text = temp_el.text
-                    # TODO: Fix the process_critical to use the note object
+
                     reading = self.process_critical(note, back_text)
                     if isinstance(elem, etree._Element):
                         if elem.tag != 'milestone' and (elem.tail is None or len(elem.tail) == 0):
@@ -852,9 +849,14 @@ class TextConverter:
                     note_mu = note['markup'] if note['markup'] else note['text']
                     # if len(note['markup']) < len(note['text']):
                     #    note_mu = note['text']
-                    note_mu = etree.XML(f'<note type="footnote" n="{fnnum}">{note_mu}</note>')
-                    temp_el.append(note_mu)
-                    elem = note_mu
+                    try:
+                        note_mu = html.escape(note_mu, True)
+                        note_mu = etree.XML(f'<note type="footnote" n="{fnnum}">{note_mu}</note>')
+                        temp_el.append(note_mu)
+                        elem = note_mu
+                    except etree.XMLSyntaxError as XSE:
+                        self.mylog("XML Syntax Error: {}".format(XSE))
+                        self.mylog("On note {}, with markup: {}".format(fnnum, note_mu))
 
             # Milestones
             elif "Page Number" in char_style or "Line Number" in char_style:
@@ -945,7 +947,7 @@ class TextConverter:
                     lemed = notedata['lem']['edsigs']
                     lempg = ' n=""'.format(notedata['lem']['edpgs'])
                 ntnum = note['num']
-                app = f'<app n="nt{ntnum}"><lem wit="{lemed}"{lempg}>{lem}</lem>'
+                app = f'<app n="nt{ntnum}" id="app{ntnum}"><lem wit="{lemed}"{lempg}>{lem}</lem>'
                 for vrnt in notedata['variants']:
                     natt = ''
                     edpgs = vrnt['edpgs']
@@ -959,6 +961,8 @@ class TextConverter:
                         app += f'<rdg wit="{edsigs}"{natt} />'
                     else:
                         app += f'<rdg wit="{edsigs}"{natt}>{vartxt}</rdg>'
+                if notedata['note']:
+                    app += f'<wit rend="note">{notedata["note"]}</wit>';
                 app += '</app>'
                 reading['app'] = etree.XML(app)
                 if lem == "FIX":
@@ -972,13 +976,20 @@ class TextConverter:
 
     @staticmethod
     def process_critical_note(anote):
-        notepts = anote['text'].split(';')
         notedata = {
             'lem': False,
-            'variants': []
+            'variants': [],
+            'note': False,
         }
+
+        appnote = re.search(r'\[[^\]]+\]', anote['text'])
+        if appnote is not None:
+            notedata['note'] = appnote.group(0)
+            anote['text'] = anote['text'].split(notedata['note'])[0]
+            notedata['note'] = notedata['note'].strip('[] ')
+        notepts = anote['text'].split(';')
+
         for rdg in notepts:
-            eds = []
             pref = True if '*' in rdg else False
             rdg = rdg.strip(' *')
             rpts = rdg.split(':')
@@ -1274,7 +1285,6 @@ class TextConverter:
                 tibsrc.tail = "\n"
                 docsrc = self.xmlroot.xpath('//sourceDesc')[0]
                 docsrc.addprevious(tibsrc)
-
             xmlstring = etree.tostring(self.xmlroot,
                                        pretty_print=True,
                                        encoding='utf-8',
@@ -1319,13 +1329,17 @@ class TextConverter:
         # The full attribute is {http://schemas.openxmlformats.org/wordprocessingml/2006/main}id
         # Easier just to pop the first key from the attribute dictionary of that element
         runel = run.element
-        fnref = runel[1]
+        try:
+            fnref = runel[1]
+        except IndexError as ie:
+            self.mylog("index error: {}".format(ie))
         fnnum = ""
         note = None
 
         if len(fnref.keys()) > 0:
             idkey = '{' + self.nsmap['w'] + '}id'
             fnnum = fnref.get(idkey)
+            # print("doing footnote {}".format(fnnum))
             note = self.footnotes[fnnum]
 
         return fnnum, note
