@@ -9,6 +9,7 @@ import unicodedata
 import zipfile
 import html
 import docx
+import json
 from lxml import etree
 
 from datetime import date
@@ -214,8 +215,7 @@ class TextConverter:
                             while fno['prev_el'] is not None and fno['prev_el'].tag != f'{wns}r' and loopct < 20:
                                 loopct += 1
                                 fno['prev_el'] = fno['prev_el'].getprevious()
-                            if fno['prev_el'] is not None:
-                                fno['is_annotation'] = fno['prev_el'].text and fno['prev_el'].text[-1] == '}'
+                            fno['prev_run'] = self.get_run_before_note(fnum)
 
                     # All runs in footnote. Footnote is a single wrapper element the "r" elements are runs
                     fno['runs'] = f[0].findall("w:r", nsmap)
@@ -248,6 +248,7 @@ class TextConverter:
                         pretext = fno['text'][:25]
                         print(f"\n\tNo footnote number found for note index {fnindex}, beginning with “{pretext}”")
                     else:
+                        fno['is_annotation'] = self.fn_is_annotation(fno)
                         fnkey = fno['num']
                         if type(fnkey) == str and type(self.footnotes) == dict:
                             self.footnotes[fnkey] = fno
@@ -831,9 +832,12 @@ class TextConverter:
                         back_text = elem.tail if elem.tail and len(elem.tail) > 0 else elem.text
                     else:
                         back_text = temp_el.text
-
+                    # print(f"back text: {back_text}")
                     reading = self.process_critical(note, back_text)
-                    if isinstance(elem, etree._Element):
+                    if not reading:
+                        print("no reading discovered!")
+                        print(f"{note['num']}, {note['text']}, {note['markup']}")
+                    elif isinstance(elem, etree._Element):
                         if elem.tag != 'milestone' and (elem.tail is None or len(elem.tail) == 0):
                             elem.text = reading['backtext']
                             elem.append(reading['app'])
@@ -935,43 +939,53 @@ class TextConverter:
         '''
         reading = False
         if len(bcktxt) > 0:
+            reading = {}
             if bcktxt[-1] == '}':
                 cestind = bcktxt.rfind('{')
-                reading = {}
                 lem = bcktxt[cestind + 1:len(bcktxt) - 1].strip() if cestind > -1 else "FIX"
                 reading['backtext'] = bcktxt[0:cestind]
-                lemed = self.edsig if self.edsig and self.edsig != '' else 'base'
-                lempg = ''
-                notedata = TextConverter.process_critical_note(note)
-                if notedata['lem']:
-                    lemed = notedata['lem']['edsigs']
-                    lempg = ' n=""'.format(notedata['lem']['edpgs'])
-                ntnum = note['num']
-                app = f'<app n="nt{ntnum}" id="app{ntnum}"><lem wit="{lemed}"{lempg}>{lem}</lem>'
-                for vrnt in notedata['variants']:
-                    natt = ''
-                    edpgs = vrnt['edpgs']
-                    edsigs = vrnt['edsigs']
-                    if len(vrnt['edpgs']) > 0:
-                        natt = f' n="{edpgs}"'
-                    if vrnt['pref']:
-                        natt += ' rend="pref"'
-                    vartxt = lem if vrnt['txt'] == '' else vrnt['txt']
-                    if 'omit' in vartxt:
-                        app += f'<rdg wit="{edsigs}"{natt} />'
-                    else:
-                        app += f'<rdg wit="{edsigs}"{natt}>{vartxt}</rdg>'
-                if notedata['note']:
-                    app += f'<wit rend="note">{notedata["note"]}</wit>';
-                app += '</app>'
-                reading['app'] = etree.XML(app)
-                if lem == "FIX":
-                    ntnumb = note['num']
-                    nteltxt = note['text']
-                    self.mylog(f"\n\t“FIX” Footnote {ntnumb} follows close brace as for apparatus, "
-                                   f"but no preceding open brace detected: "
-                                   f"\n\tWord before note: “{bcktxt}”"
-                                   f"\n\tNote: {nteltxt}")
+            elif len(bcktxt) == 1:
+                lem = bcktxt
+                reading['backtext'] = ""
+            else:
+                syls = re.split(r"\u0F0B", bcktxt)
+                lem = syls.pop()  # when preceding text ends in tsek this will be empty
+                if lem == '':
+                    lem = syls.pop() + "\u0F0B"
+                reading['backtext'] = "\u0F0B".join(syls) + "\u0F0B"
+
+            lemed = self.edsig if self.edsig and self.edsig != '' else 'base'
+            lempg = ''
+            notedata = TextConverter.process_critical_note(note)
+            if notedata['lem']:
+                lemed = notedata['lem']['edsigs']
+                lempg = ' n=""'.format(notedata['lem']['edpgs'])
+            ntnum = note['num']
+            app = f'<app n="nt{ntnum}" id="app{ntnum}"><lem wit="{lemed}"{lempg}>{lem}</lem>'
+            for vrnt in notedata['variants']:
+                natt = ''
+                edpgs = vrnt['edpgs']
+                edsigs = vrnt['edsigs']
+                if len(vrnt['edpgs'].strip(' ')) > 0:
+                    natt = f' n="{edpgs}"'
+                if vrnt['pref']:
+                    natt += ' rend="pref"'
+                vartxt = lem if vrnt['txt'] == '' else vrnt['txt']
+                if 'omit' in vartxt:
+                    app += f'<rdg wit="{edsigs}"{natt} />'
+                else:
+                    app += f'<rdg wit="{edsigs}"{natt}>{vartxt}</rdg>'
+            if notedata['note']:
+                app += f'<wit rend="note">{notedata["note"]}</wit>';
+            app += '</app>'
+            reading['app'] = etree.XML(app)
+            if lem == "FIX":
+                ntnumb = note['num']
+                nteltxt = note['text']
+                self.mylog(f"\n\t“FIX” Footnote {ntnumb} follows close brace as for apparatus, "
+                               f"but no preceding open brace detected: "
+                               f"\n\tWord before note: “{bcktxt}”"
+                               f"\n\tNote: {nteltxt}")
         return reading
 
     @staticmethod
@@ -987,7 +1001,8 @@ class TextConverter:
             notedata['note'] = appnote.group(0)
             anote['text'] = anote['text'].split(notedata['note'])[0]
             notedata['note'] = notedata['note'].strip('[] ')
-        notepts = anote['text'].split(';')
+
+        notepts = anote['text'].strip(' .').split(';')
 
         for rdg in notepts:
             pref = True if '*' in rdg else False
@@ -1323,7 +1338,40 @@ class TextConverter:
             return False
         return True
 
-    def getFootnoteFromRefRun(self, run):
+    def fn_is_annotation(self, fno):
+        """
+        Determines if a certain footnote is an annotation
+        :param fno:
+        :return:
+        """
+        is_annotation = fno['prev_el'] is not None and fno['prev_el'].text and fno['prev_el'].text[-1] == '}'
+        pattern = r"([A-Z][a-z0-9]+,?\s*)+:\s+([\u0F00-\u0FFF]+|[oO]mits|[iI]llegible|[aA]dds)"
+        # prevtxt = self.get_text_before_note(fno['num'])
+        if not is_annotation and fno['text']:
+            is_annotation = re.search(pattern, fno['text'])
+        if not is_annotation and fno['markup']:
+            is_annotation = re.search(pattern, fno['markup'])
+        return is_annotation
+
+    def get_run_before_note(self, nnum):
+        """
+        Gets the immediately preceding text to a footnote
+        :param nnum:
+        :return:
+        """
+        prevrun = None
+        for paragraph in self.worddoc.paragraphs:
+            for run in paragraph.runs:
+                if run.style.name == 'footnote reference':
+                    fnnum, note = self.getFootnoteFromRefRun(run, False)
+                    if fnnum == nnum:
+                        if prevrun and prevrun.text:
+                            # print(f"text before note {nnum}: {prevrun.text}")
+                            return prevrun.text
+                prevrun = run
+        return prevrun
+
+    def getFootnoteFromRefRun(self, run, include_note=True):
         # Get the footnote number from the run containing the "footnote reference"
         # Second element in footnote ref container has the number/id: <w:footnoteReference w:id="2"/>
         # The full attribute is {http://schemas.openxmlformats.org/wordprocessingml/2006/main}id
@@ -1340,7 +1388,8 @@ class TextConverter:
             idkey = '{' + self.nsmap['w'] + '}id'
             fnnum = fnref.get(idkey)
             # print("doing footnote {}".format(fnnum))
-            note = self.footnotes[fnnum]
+            if include_note:
+                note = self.footnotes[fnnum]
 
         return fnnum, note
 
