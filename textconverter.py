@@ -18,6 +18,8 @@ from w3lib.html import replace_entities
 
 TEMPLATE_FOLDER = 'templates'
 IGNORABLE_STYLES = ['Paragraph Char', 'List Bullet Char']
+ANNOTATION_PATTERN = r"((?:[A-Z][a-z0-9]+(?:\s+\([0-9\.ab]+\))?,?\s*)+):?\s+" \
+                  r"([\u0F00-\u0FFF]+|[oO]mits|[iI]llegible|[aA]dds|[uU]nclear)"
 
 
 def get_lang_by_char(chr):
@@ -799,6 +801,8 @@ class TextConverter:
 
             char_style = run.style.name
             is_new_style = True if char_style != last_run_style else False
+            # if "root" in char_style.lower():
+            #    print(f"root style: {char_style}")
 
             # Default Paragraph Font
             if not char_style or char_style == "" or "Default Paragraph Font" in char_style:
@@ -971,12 +975,19 @@ class TextConverter:
                 if vrnt['pref']:
                     natt += ' rend="pref"'
                 vartxt = lem if vrnt['txt'] == '' else vrnt['txt']
-                if 'omit' in vartxt:
-                    app += f'<rdg wit="{edsigs}"{natt} />'
-                else:
-                    app += f'<rdg wit="{edsigs}"{natt}>{vartxt}</rdg>'
+                # For English descriptive terms in annotation, make into type attribute and use no text
+                keywords = ['omit', 'illegible', 'unclear', 'corrupt']
+                if any([word in vartxt.lower() for word in keywords]):
+                    vartxt = vartxt.lower()
+                    if vartxt == 'omits':
+                        vartxt = 'omit'
+                    natt += f' lang="eng" type="{vartxt}"'
+                    vartxt = ''
+                app += f'<rdg wit="{edsigs}"{natt}>{vartxt}</rdg>'
             if notedata['note']:
-                app += f'<wit rend="note">{notedata["note"]}</wit>';
+                app += f'<wit rend="note">{notedata["note"]}</wit>'
+            if len(notedata['interp']) > 0:
+                app += f'<interp value="{notedata["interp"]}"/>'
             app += '</app>'
             reading['app'] = etree.XML(app)
             if lem == "FIX":
@@ -994,20 +1005,33 @@ class TextConverter:
             'lem': False,
             'variants': [],
             'note': False,
+            'interp': ''
         }
 
         appnote = re.search(r'\[[^\]]+\]', anote['text'])
         if appnote is not None:
             notedata['note'] = appnote.group(0)
-            anote['text'] = anote['text'].split(notedata['note'])[0]
+            anote['text'] = anote['text'].split(notedata['note'])[0].strip()
             notedata['note'] = notedata['note'].strip('[] ')
 
-        notepts = anote['text'].strip(' .').split(';')
+
+        # notepts = anote['text'].strip(' .').split(';')
+        notepts = anote['text'].split('. ', 1)
+        if len(notepts) > 1 and notepts[1] != '':
+            notedata['interp'] = notepts[1]  # Peel off the descriptive note
+        notepts = notepts[0].strip(' .').split(';')
+
+        # Old pattern for separating reading from edition sigla, see ANNOTATION_PATTERN above
+        # pattern = r"((?:[A-Z][a-z0-9]+,?\s*)+):?\s+([\u0F00-\u0FFF]+|[oO]mits|[iI]llegible|[aA]dds|[uU]nclear)"
 
         for rdg in notepts:
             pref = True if '*' in rdg else False
             rdg = rdg.strip(' *')
-            rpts = rdg.split(':')
+            mtc = re.search(ANNOTATION_PATTERN, rdg)
+            if mtc:
+                rpts = [mtc.group(1), mtc.group(2)]
+            else:
+                rpts = rdg.split(':')
             tempeds = [ed.strip() for ed in rpts[0].split(',')]
             edsigs = []
             edpgs = []
@@ -1345,12 +1369,10 @@ class TextConverter:
         :return:
         """
         is_annotation = fno['prev_el'] is not None and fno['prev_el'].text and fno['prev_el'].text[-1] == '}'
-        pattern = r"([A-Z][a-z0-9]+,?\s*)+:\s+([\u0F00-\u0FFF]+|[oO]mits|[iI]llegible|[aA]dds)"
-        # prevtxt = self.get_text_before_note(fno['num'])
         if not is_annotation and fno['text']:
-            is_annotation = re.search(pattern, fno['text'])
+            is_annotation = re.search(ANNOTATION_PATTERN, fno['text'])
         if not is_annotation and fno['markup']:
-            is_annotation = re.search(pattern, fno['markup'])
+            is_annotation = re.search(ANNOTATION_PATTERN, fno['markup'])
         return is_annotation
 
     def get_run_before_note(self, nnum):

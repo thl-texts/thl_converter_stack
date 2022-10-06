@@ -77,6 +77,7 @@ keydict = {
     "plain-text": ["Plain Text"],
     "pub-place": ["publication place"],
     "publisher": ["publisher"],
+    "root": ["Root", "root"],
     "root-text": ["Root Text", "Root text"],
     "sa-bcad": ["Sa bcad"],
     "speak-bud-deity": ["X-Speaker Buddhist Deity", "SpeakerBuddhistDeity", "Epithet Buddhist Deity", "Speaker Epithet Buddhist Deity"],
@@ -335,6 +336,10 @@ elements = {
     "publisher": {
         "tag": "publisher",
         "attributes": {},
+    },
+    "root": {
+        "tag": "seg",
+        "attributes": {"type": "roottext"},
     },
     "root-text": {
         "tag": "seg",
