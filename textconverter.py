@@ -18,8 +18,17 @@ from w3lib.html import replace_entities
 
 TEMPLATE_FOLDER = 'templates'
 IGNORABLE_STYLES = ['Paragraph Char', 'List Bullet Char']
-ANNOTATION_PATTERN = r"((?:[A-Z][a-z0-9]+(?:\s+\([0-9\.ab]+\))?,?\s*)+):?\s+" \
-                  r"([\u0F00-\u0FFF]+|[oO]mits|[iI]llegible|[aA]dds|[uU]nclear)"
+ANNOTATION_PATTERN = r"((?:\*?\s*[A-Z][a-z0-9]+(?:\s+\([0-9\.ab]+\))?,?\s*)+):?\s+" \
+                  r"([\u0F00-\u0FFF]+|[oO]mits?|[iI]llegible|[aA]dds|[uU]nclear)"
+'''
+Explanation of annotation regex above: 
+    first parentheses ( = matching group of all sigla with optional pages (most of the first line)
+    second parentheses (?: = non-matching group of sigla: [A-Z][a-z0-9] with the above
+    third parentheses (?: = non-matching group of optional colon, space, and pagination
+                            within parentheses: (?:\s+\([0-9\.ab]+\))? within second parentheses
+    fourth parentheses \(...\) = escaped parentheses in third parenthese above part of regex
+    fifth parentheses ([\u0F00-\u0FFF] ... ) = matching group of Tibetan reading or keywords (the whole second line)
+'''
 
 
 def get_lang_by_char(chr):
@@ -36,6 +45,7 @@ def get_lang_by_char(chr):
 class TextConverter:
 
     def __init__(self, args):
+        self.args = args
         self.files = []
         self.current_file = ''
         self.current_file_path = ''
@@ -534,7 +544,7 @@ class TextConverter:
                 self.headstack.append(hdiv)      # add the hdiv to the stack
             # if it's the same level as current
             elif hlevel == currlevel:
-                if len(self.headstack) > 0 :
+                if len(self.headstack) > 0:
                     self.headstack[-1].addnext(hdiv)
                     self.headstack[-1] = hdiv
                 else:
@@ -787,6 +797,7 @@ class TextConverter:
         if temp_el.text is None:
             temp_el.text = ""
 
+        lemma_contents = []
         for rct, run in enumerate(p.runs):
             if run is None or rct < skip:
                 continue
@@ -795,6 +806,31 @@ class TextConverter:
                 elem.text = ""
             if elem is not None and elem.tail is None:
                 elem.tail = ""
+
+            if "{" in rtxt and "}" not in rtxt:
+                # self.mylog(f"Open but no close brace: {rtxt}")
+                lemma_contents.append(run)
+                nextct = rct
+                while "}" not in p.runs[nextct].text and nextct - rct < 100:
+                    nextct += 1
+                    lemma_contents.append(p.runs[nextct])
+                if "}" in p.runs[nextct].text and p.runs[nextct + 1].style.name == 'footnote reference':
+                    skip = nextct + 1
+                    if rtxt == '{' or rtxt[0] == '{':
+                        continue
+                    elif rtxt[-1] == '{':
+                        lemma_contents.pop(0)
+                        rtxt = rtxt[:-1]
+                        run.text = rtxt
+                    else:
+                        pts = rtxt.split('{')
+                        rtxt = pts[0]
+                        run.text = rtxt
+                        lemma_contents[0] = pts[1]
+                else:
+                    self.mylog(f"Did not find closing brace for initial opening brace. Ignoring: {rtxt}")
+                    lemma_contents = []
+
 
             # if "Heading" in p.style.name:
             #    rtxt = re.sub(r'^[\d\s\.]+', '', rtxt)
@@ -825,6 +861,8 @@ class TextConverter:
             elif "footnote" in char_style.lower():
                 style_before_footnote = last_run_style
                 fnnum, note = self.getFootnoteFromRefRun(run)
+                if int(fnnum) == 6:
+                    print("here")
                 if not note:
                     self.mylog(f"\n\tCould not find footnote object for {fnnum}")
                     return
@@ -837,10 +875,11 @@ class TextConverter:
                     else:
                         back_text = temp_el.text
                     # print(f"back text: {back_text}")
-                    reading = self.process_critical(note, back_text)
+                    reading = self.process_critical(note, back_text, lemma_contents)
+                    lemma_contents = []  # reset lemma contents list after being processed
                     if not reading:
-                        print("no reading discovered!")
-                        print(f"{note['num']}, {note['text']}, {note['markup']}")
+                        self.mylog("no reading discovered!")
+                        self.mylog(f"{note['num']}, {note['text']}, {note['markup']}")
                     elif isinstance(elem, etree._Element):
                         if elem.tag != 'milestone' and (elem.tail is None or len(elem.tail) == 0):
                             elem.text = reading['backtext']
@@ -933,7 +972,7 @@ class TextConverter:
                 self.current_el.text = ""
                 self.current_el.insert(0, numel)
 
-    def process_critical(self, note, bcktxt):
+    def process_critical(self, note, bcktxt, lemma_contents):
         '''
         Processes footnotes for critical edition with alternate readings from other editions
 
@@ -941,63 +980,109 @@ class TextConverter:
         :param bcktxt: the text preceding the note reference containing the lemma in braces
         :return:
         '''
-        reading = False
-        if len(bcktxt) > 0:
-            reading = {}
-            if bcktxt[-1] == '}':
-                cestind = bcktxt.rfind('{')
-                lem = bcktxt[cestind + 1:len(bcktxt) - 1].strip() if cestind > -1 else "FIX"
-                reading['backtext'] = bcktxt[0:cestind]
-            elif len(bcktxt) == 1:
-                lem = bcktxt
-                reading['backtext'] = ""
-            else:
-                syls = re.split(r"\u0F0B", bcktxt)
-                lem = syls.pop()  # when preceding text ends in tsek this will be empty
-                if lem == '':
-                    lem = syls.pop() + "\u0F0B"
-                reading['backtext'] = "\u0F0B".join(syls) + "\u0F0B"
+        reading = {}
 
-            lemed = self.edsig if self.edsig and self.edsig != '' else 'base'
-            lempg = ''
-            notedata = TextConverter.process_critical_note(note)
-            if notedata['lem']:
-                lemed = notedata['lem']['edsigs']
-                lempg = ' n=""'.format(notedata['lem']['edpgs'])
-            ntnum = note['num']
-            app = f'<app n="nt{ntnum}" id="app{ntnum}"><lem wit="{lemed}"{lempg}>{lem}</lem>'
+        if bcktxt is None or len(bcktxt) == 0:
+            reading['backtext'] = ''
+            lem = ''
+        elif bcktxt[-1] == '}':
+            cestind = bcktxt.rfind('{')
+            lem = bcktxt[cestind + 1:len(bcktxt) - 1].strip() if cestind > -1 else "FIX"
+            reading['backtext'] = bcktxt[0:cestind]
+        elif len(lemma_contents) > 0:
+            reading['backtext'] = ""
+        elif len(bcktxt) == 1:
+            lem = bcktxt
+            reading['backtext'] = ""
+        else:
+            syls = re.split(r"\u0F0B", bcktxt)
+            lem = syls.pop()  # when preceding text ends in tsek this will be empty
+            if lem == '':
+                lem = syls.pop() + "\u0F0B"
+            reading['backtext'] = "\u0F0B".join(syls) + "\u0F0B"
+
+        lemed = self.edsig if self.edsig and self.edsig != '' else 'base'
+        lempg = ''
+        notedata = TextConverter.process_critical_note(note)
+        if notedata['lem']:
+            lemed = notedata['lem']['edsigs']
+            lempg = ' n=""'.format(notedata['lem']['edpgs'])
+        ntnum = note['num']
+
+        # If there's marked up content in the lemma braces, get the XML string for the lem value
+        if len(lemma_contents) > 0:
+            lem = self.process_lemma_contents(lemma_contents)
+
+        # Check for readings that are just a single punctuation mark, if one exists
+        # Then trim lemma to last character (punctuation) and put extra in the backtext
+        if len(lem) > 1:
+            # RegEx for a single punctuation mark within the range between tsek and gter shad
+            tibpunct ='[\u0F0B-\u0F14]'
             for vrnt in notedata['variants']:
-                natt = ''
-                edpgs = vrnt['edpgs']
-                edsigs = vrnt['edsigs']
-                if len(vrnt['edpgs'].strip(' ')) > 0:
-                    natt = f' n="{edpgs}"'
-                if vrnt['pref']:
-                    natt += ' rend="pref"'
-                vartxt = lem if vrnt['txt'] == '' else vrnt['txt']
-                # For English descriptive terms in annotation, make into type attribute and use no text
-                keywords = ['omit', 'illegible', 'unclear', 'corrupt']
-                if any([word in vartxt.lower() for word in keywords]):
-                    vartxt = vartxt.lower()
-                    if vartxt == 'omits':
-                        vartxt = 'omit'
-                    natt += f' lang="eng" type="{vartxt}"'
-                    vartxt = ''
-                app += f'<rdg wit="{edsigs}"{natt}>{vartxt}</rdg>'
-            if notedata['note']:
-                app += f'<wit rend="note">{notedata["note"]}</wit>'
-            if len(notedata['interp']) > 0:
-                app += f'<interp value="{notedata["interp"]}"/>'
-            app += '</app>'
-            reading['app'] = etree.XML(app)
-            if lem == "FIX":
-                ntnumb = note['num']
-                nteltxt = note['text']
-                self.mylog(f"\n\t“FIX” Footnote {ntnumb} follows close brace as for apparatus, "
-                               f"but no preceding open brace detected: "
-                               f"\n\tWord before note: “{bcktxt}”"
-                               f"\n\tNote: {nteltxt}")
+                if re.match(tibpunct, vrnt['txt']):
+                    reading['backtext'] += lem[0:-1]
+                    lem = lem[-1]
+                    break
+
+        app = f'<app n="nt{ntnum}" id="app{ntnum}"><lem wit="{lemed}"{lempg}>{lem}</lem>'
+        for vrnt in notedata['variants']:
+            natt = ''
+            edpgs = vrnt['edpgs']
+            edsigs = vrnt['edsigs']
+            if len(vrnt['edpgs'].strip(' ')) > 0:
+                natt = f' n="{edpgs}"'
+            if vrnt['pref']:
+                natt += ' rend="pref"'
+            vartxt = lem if vrnt['txt'] == '' else vrnt['txt']
+            # For English descriptive terms in annotation, make into type attribute and use no text
+            keywords = ['omit', 'illegible', 'unclear', 'corrupt']
+            if any([word in vartxt.lower() for word in keywords]):
+                vartxt = vartxt.lower()
+                if vartxt == 'omits':
+                    vartxt = 'omit'
+                natt += f' lang="eng" type="{vartxt}"'
+                vartxt = ''
+
+            app += f'<rdg wit="{edsigs}"{natt}>{vartxt}</rdg>'
+        if notedata['note']:
+            app += f'<wit rend="note">{notedata["note"]}</wit>'
+        if len(notedata['interp']) > 0:
+            app += f'<interp value="{notedata["interp"]}"/>'
+        app += '</app>'
+        reading['app'] = etree.XML(app)
+        if lem == "FIX":
+            ntnumb = note['num']
+            nteltxt = note['text']
+            self.mylog(f"\n\t“FIX” Footnote {ntnumb} follows close brace as for apparatus, "
+                           f"but no preceding open brace detected: "
+                           f"\n\tWord before note: “{bcktxt}”"
+                           f"\n\tNote: {nteltxt}")
         return reading
+
+    def process_lemma_contents(self, lcnts):
+        lemmaout = ""
+        for rn in lcnts:
+            if isinstance(rn, str):
+                lemmaout += rn
+            elif isinstance(rn, bytes):
+                lemmaout += rn.decode('utf-8')
+            elif isinstance(rn, docx.text.run.Run):
+                rstyle = rn.style.name
+                rtxt = rn.text
+                if "Page Number" in rstyle or "Line Number" in rstyle:
+                    # If there are multiple ms of the same style, they get merged in merge_runs. So split them up
+                    msitems = rtxt.split('][')
+                    for mstxt in msitems:
+                        elem = self.createmilestone(rstyle, mstxt)
+                        lemmaout += etree.tostring(elem).decode('utf-8')
+                else:
+                    new_el = getStyleElement(rstyle)
+                    if new_el is None:
+                        lemmaout += rtxt
+                    else:
+                        new_el.text = rtxt
+                        lemmaout += etree.tostring(new_el).decode('utf-8')
+        return lemmaout.replace('{', '').replace('}', '')
 
     @staticmethod
     def process_critical_note(anote):
@@ -1305,10 +1390,11 @@ class TextConverter:
             # Calculate bibl folder (first number of text id number)
             mtch = re.search(r'-(\d{4})-', genid)
             fldr = mtch.group(1)[0] if mtch else '0'
+            biblent = "<!ENTITY {1} SYSTEM \"../../{2}/{1}-bib.xml\">" if self.args.bibl_entity is True else ""
             docType = "<!DOCTYPE TEI.2 SYSTEM \"{0}xtib3.dtd\" [ \n" \
                 "\t<!ENTITY % thlnotent SYSTEM \"{0}catalog-refs.dtd\" > \n" \
                 "\t%thlnotent;\n" \
-                "\t<!ENTITY {1} SYSTEM \"../../{2}/{1}-bib.xml\">\n]>".format(self.dtdpath, genid, fldr)
+                "\t{3}\n]>".format(self.dtdpath, genid, fldr, biblent)
 
             # Replace profile desc with entity
             pdentity = etree.Entity('thdlprofiledesc')
@@ -1319,11 +1405,12 @@ class TextConverter:
             # Add tibble entity if there is a text id
             if self.textid and genid:
                 tibsrc = etree.XML('<sourceDesc n="tibbibl"></sourceDesc>')
-                tibbibl_ent = etree.Entity(genid)
-                tibsrc.append(tibbibl_ent)
-                tibsrc.tail = "\n"
-                docsrc = self.xmlroot.xpath('//sourceDesc')[0]
-                docsrc.addprevious(tibsrc)
+                if self.args.bibl_entity:
+                    tibbibl_ent = etree.Entity(genid)
+                    tibsrc.append(tibbibl_ent)
+                    tibsrc.tail = "\n"
+                    docsrc = self.xmlroot.xpath('//sourceDesc')[0]
+                    docsrc.addprevious(tibsrc)
             xmlstring = etree.tostring(self.xmlroot,
                                        pretty_print=True,
                                        encoding='utf-8',

@@ -16,6 +16,10 @@ def main():
     parser.add_argument('-dtd', '--dtdpath',
                         default='http://texts.thlib.org/cocoon/texts/catalogs/',
                         help='Path to the xtib3.dtd to add to the xmlfile')
+    parser.add_argument('-be', '--bibl-entity',
+                        action="store_true",
+                        default=False,
+                        help="Whether to create an entity for the bibl file base on filename")
     parser.add_argument('-i', '--indir',
                         default='./workspace/in',
                         help='The relative path to the in-folder containing files to be converted. '
