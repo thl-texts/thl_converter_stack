@@ -20,6 +20,9 @@ def main():
                         action="store_true",
                         default=False,
                         help="Whether to create an entity for the bibl file base on filename")
+    parser.add_argument('-e', '--edition-sigla',
+                        default='',
+                        help="The main edition sigla to be used for a lemma readings")
     parser.add_argument('-i', '--indir',
                         default='./workspace/in',
                         help='The relative path to the in-folder containing files to be converted. '

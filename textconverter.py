@@ -73,7 +73,9 @@ class TextConverter:
         self.headstack = []
         self.current_el = None
         self.pindex = -1
-        self.edsig = ''
+        self.edsig = args.edition_sigla
+        if self.edsig:
+            print(f"Using edition sigla from command argurments: {self.edsig}")
         self.chapnum = None
         self.textid = ''
         self.in_multiline_apparatus = False
@@ -117,7 +119,7 @@ class TextConverter:
         self.current_file_path = os.path.join(self.indir, self.current_file)
         self.worddoc = docx.Document(self.current_file_path)
         if self.textid == '':
-            mtch = re.search(r"^\S+-\d+", self.current_file)
+            mtch = re.search(r"^\S+-\d+-text", self.current_file)
             if mtch:
                 self.textid = mtch.group(0)
         self.nsmap = self.worddoc.element.nsmap
@@ -386,7 +388,7 @@ class TextConverter:
         problems_on = False
         tablerows = len(wordtable.rows)
         problems = []
-        print("Process Metadata Table ... {}".format(tablerows))
+        print("Process Metadata Table ...")
         for rwnum in range(0, tablerows):
             try:
                 if wordtable._column_count < 2:
@@ -418,22 +420,15 @@ class TextConverter:
 
                 if label == "Text ID":
                     self.textid = rowval
-
+                # print(label)
                 # All Uppercase are Headers in the table skip
                 if label.isupper():
-                    if label == 'PROBLEMS':
-                        problems_on = True
                     continue  # Skip labels
-                if problems_on:
-                    print("Processing Problems: ", end="")
-                    for cellp in wordtable.cell(rwnum, 0).paragraphs:
-                        problems.append(cellp.text.strip())
-                    if rwnum < tablerows - 1:
-                        continue  # iterate through all the problems which should always be last in the table
-                    print(" Processed {} problems".format(len(problems)))
-                    label = "Problems"   # the string {Problems} should be in template where problems go
-                    problems = [f"<p>{p}</p>" for p in problems]
-                    rowval = "\n".join(problems)
+                if 'problems' in label.lower():
+                    label = "Problems"  # Must be "{Problems}" in template
+                    rowval = self.getTextFromCell(wordtable.cell(rwnum, 1))
+                    if rowval is None or len(rowval) == 0:
+                        rowval = "No problems"
 
                 temppt = label.split(' (')  # some rows have " (if applicable)" or possible some other instruction
 
@@ -471,9 +466,7 @@ class TextConverter:
             if res:
                 xmltext = xmltext.replace('{Text ID}', res.group(1))
 
-        # if there are no problems (i.e. the string {problems} is still in markup, then replace with an empty paragraph.
-        xmltext = xmltext.replace('{Problems}', '<p>No problems</p>')
-        self.xmltemplate = re.sub(r'{([^}]+)}', r'<!--\1-->', xmltext)
+        self.xmltemplate = re.sub(r'{([^}]+)}', r'<!--\1-->', xmltext)  # comment out any unreplaced labels
 
     def convertpara(self, p):
         style_name = p.style.name
@@ -861,8 +854,6 @@ class TextConverter:
             elif "footnote" in char_style.lower():
                 style_before_footnote = last_run_style
                 fnnum, note = self.getFootnoteFromRefRun(run)
-                if int(fnnum) == 6:
-                    print("here")
                 if not note:
                     self.mylog(f"\n\tCould not find footnote object for {fnnum}")
                     return
@@ -1385,16 +1376,19 @@ class TextConverter:
 
         # Write XML File
         with open(fpth, "wb") as outfile:
-            genid = self.textid.replace('-text', '')
-            genid = re.sub(r'(-\d{4})-\d+', r'\1', genid)  # remove text document sub number for e.g. lccw-0353-1.docx
+            genid = self.textid.split('-text')[0] if '-text' in self.textid else self.textid
+            bibid = genid + '-bib'
+            # remove text document sub number for e.g. lccw-0353-1.docx
+            # genid = re.sub(r'(-\d{4})-\d+', r'\1', genid)
             # Calculate bibl folder (first number of text id number)
-            mtch = re.search(r'-(\d{4})-', genid)
+            mtch = re.search(r'-(\d{4})', genid)
             fldr = mtch.group(1)[0] if mtch else '0'
-            biblent = "<!ENTITY {1} SYSTEM \"../../{2}/{1}-bib.xml\">" if self.args.bibl_entity is True else ""
-            docType = "<!DOCTYPE TEI.2 SYSTEM \"{0}xtib3.dtd\" [ \n" \
-                "\t<!ENTITY % thlnotent SYSTEM \"{0}catalog-refs.dtd\" > \n" \
+            biblent = f"<!ENTITY {bibid} " \
+                      f"SYSTEM \"../../{fldr}/{bibid}.xml\">" if self.args.bibl_entity is True else ""
+            doc_type = f"<!DOCTYPE TEI.2 SYSTEM \"{self.dtdpath}xtib3.dtd\" [ \n" \
+                f"\t<!ENTITY % thlnotent SYSTEM \"{self.dtdpath}catalog-refs.dtd\" > \n" \
                 "\t%thlnotent;\n" \
-                "\t{3}\n]>".format(self.dtdpath, genid, fldr, biblent)
+                f"\t{biblent}\n]>"
 
             # Replace profile desc with entity
             pdentity = etree.Entity('thdlprofiledesc')
@@ -1402,11 +1396,11 @@ class TextConverter:
             pdesc.addprevious(pdentity)
             pdesc.getparent().remove(pdesc)
 
-            # Add tibble entity if there is a text id
+            # Add tibbibl entity if there is a text id
             if self.textid and genid:
                 tibsrc = etree.XML('<sourceDesc n="tibbibl"></sourceDesc>')
                 if self.args.bibl_entity:
-                    tibbibl_ent = etree.Entity(genid)
+                    tibbibl_ent = etree.Entity(bibid)
                     tibsrc.append(tibbibl_ent)
                     tibsrc.tail = "\n"
                     docsrc = self.xmlroot.xpath('//sourceDesc')[0]
@@ -1415,7 +1409,7 @@ class TextConverter:
                                        pretty_print=True,
                                        encoding='utf-8',
                                        xml_declaration=True,
-                                       doctype=docType)
+                                       doctype=doc_type)
             outfile.write(xmlstring)
 
     #  HELPER METHODS
@@ -1448,6 +1442,32 @@ class TextConverter:
         if "Paragraph" not in style_name and "Outline" not in style_name and "Normal" not in style_name:
             return False
         return True
+
+    @staticmethod
+    def getTag(element):
+        return "%s:%s" % (element.prefix, re.match("{.*}(.*)", element.tag).group(1))
+
+    def getTextFromCell(self, element):
+        rels = self.worddoc.part.rels
+        celltxt = ''
+        for cellp in element.paragraphs:
+            for cld in cellp._p:
+                if cld.text:
+                    celltxt += cld.text
+                else:
+                    # Get text from hyperlink
+                    ctag = self.getTag(cld)
+                    if ctag == "w:hyperlink":
+                        rid = cld.get('{%s}id' % self.nsmap['r'])
+                        for subc in cld:
+                            ctag = self.getTag(subc)
+                            if ctag == "w:r":
+                                celltxt += subc.text
+                        # Add on the href from the link in parenthese)
+                        if rid in rels.keys():
+                            href = rels[rid]._target
+                            celltxt += ' (%s)' % href
+        return celltxt
 
     def fn_is_annotation(self, fno):
         """

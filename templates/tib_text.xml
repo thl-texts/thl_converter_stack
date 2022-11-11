@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE TEI.2 SYSTEM "http://texts.thlib.org/cocoon/texts/catalogs/xtib3.dtd">
-<TEI.2 rend="styled full">
+<TEI.2 rend="styled full" lang="tib">
 	<teiHeader lang="eng">
 		<fileDesc>
 			<titleStmt>
@@ -82,15 +82,10 @@
 						<idno type="other">{Other ID number}</idno>
 					</publicationStmt>
 				</biblFull>
-				<p n="problems">{Problems/Anomalies}</p>
+				<p n="problems">{Problems}</p>
 			</sourceDesc>
 		</fileDesc>
 		<encodingDesc>
-			<editorialDecl n="problems">
-				<interpretation corresp="thleditor">
-					{Problems}
-				</interpretation>
-			</editorialDecl>
 			<tagsDecl>
 				<rendition id="text">styled</rendition>
 			</tagsDecl>
