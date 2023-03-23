@@ -1,2 +1,5 @@
+docx==0.2.4
 lxml==4.9.0
+Pillow==9.4.0
 python-docx==0.8.10
+w3lib==2.1.1
