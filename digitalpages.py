@@ -5,6 +5,8 @@ A convert that just addes digital pages to word docs
 from baseconverter import BaseConverter
 from os import path
 import docx
+from docx.text.run import Run
+from docx.oxml.text.run import CT_R
 import re
 import logging
 
@@ -13,8 +15,104 @@ class DigitalPages(BaseConverter):
     outfile = ""
     lines_per_page = 15
     tsek_per_line = 20
-    digpage_sigla = 'TDP'
-    digline_sigla = 'TDL'
+    digstyles = {
+        'page': 'page number', # This is the digital page style name (page number repurposed)
+        'line': 'line number' # this is the digital line style name
+    }
+    # style_id_list = [digpage_style_id, digline_style_id]
+    pgct = 1  # Page start 1 (to insert first page and line markers)
+    lnct = 0  # Line start 0 (increment after adding so we can use = below)
+    ct = 0
+    tmplts = {
+        'page': 'tdp',
+        'line': 'tdl'
+    }
+    tsekpattern = r'[\u0F00-\u0F14\s]+'  # at least one of the Tibetan punctuation or space-like characters
+    tskcount = 0
+    donefirst = False
+
+    def convertdoc(self):
+        self.current_file_path = path.join(self.indir, self.current_file)
+        self.worddoc = docx.Document(self.current_file_path)
+        pct = 0
+        totalpct = len(self.worddoc.paragraphs)
+        print("Inserting placeholders ...")
+        foundhead = False
+        for p in self.worddoc.paragraphs:
+            pct += 1
+            print("\rDoing paragraph {} of {}        ".format(pct, totalpct), end="")
+            psnm = p.style.name
+            # Don't start counting until we get the first header (usually front or body)
+            if not foundhead and 'Heading' not in psnm:
+                continue
+            foundhead = True
+            # After that ignore headers and only proc ess non-headers
+            if 'Heading' not in psnm:
+                self.insert_ms(p)
+                # self.apply_styles(p)
+        print("\n")
+        self.outfile = path.join(self.outdir, self.current_file.replace('.doc', '-out.doc'))
+        self.worddoc.save(self.outfile)
+
+    def insert_ms(self, p):
+        for r in p.runs:
+            inserts = []
+            rtxt = r.text
+            for m in re.finditer(self.tsekpattern, rtxt):
+                self.tskcount += 1
+                if self.tskcount == self.tsek_per_line:
+                    self.lnct += 1
+                    self.tskcount = 0
+                    if self.lnct == self.lines_per_page:
+                        self.pgct += 1
+                        self.lnct = 0
+                        inserts.append(('page', f"{self.pgct}", m))
+                        inserts.append(('line', f"{self.pgct}.{self.lnct + 1}", m))
+                    else:
+                        inserts.append(('line', f"{self.pgct}.{self.lnct + 1}", m))
+            inserts.reverse()
+            for ins in inserts:
+                mstype, msnum, m = ins
+                ms = f"[{self.tmplts[mstype]} {msnum}]"
+                rtxt = rtxt[:m.end()] + ms + rtxt[m.end():]
+
+            r.text = rtxt
+            if not self.donefirst:
+                rtxt = f"[{self.tmplts['page']} 1][{self.tmplts['line']} 1.1]" + rtxt
+                r.text = rtxt
+                self.donefirst = True
+
+    def apply_styles(self, p):
+        for r in p.runs:
+            rtxt = r.text
+            pgrex = '\[' + self.tmplts["page"] + '\s+\d+\]'
+            mtchs = [m for m in re.finditer(pgrex, rtxt)]
+            if len(mtchs) > 0:
+                mtchs.reverse()
+                for mtch in mtchs:
+                    currun = rtxt[:mtch.start() - 1]
+                    ms = rtxt[mtch.start():mtch.end() + 1]
+                    postrun = rtxt[:mtch.end() + 1]
+                    r.text = currun
+                    msrun = self.add_run(r, ms, self.digstyles['page'])
+                    pr = self.add_run(msrun, postrun, r.style.name)
+
+    def add_run(self, r, txt, style_name):
+        runel = CT_R()
+        r._element.addnext(runel)
+        newrun = Run(runel, r._parent)
+        newrun.text = txt
+        newrun.style = self.worddoc.styles[style_name]
+        return newrun
+
+
+####### OLD CODE ########
+class OldDigitalPages(BaseConverter):
+    outfile = ""
+    lines_per_page = 15
+    tsek_per_line = 20
+    digpage_sigla = 'TDP'  # for Tibetan Digital Page
+    digline_sigla = 'TDL'  # for Tibetan Digital Line
     digpage_style_id = 'page number'
     digline_style_id = 'line number'
     style_id_list = [digpage_style_id, digline_style_id]
