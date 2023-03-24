@@ -27,16 +27,25 @@ class DigitalPages(BaseConverter):
         'page': 'tdp',
         'line': 'tdl'
     }
-    tsekpattern = r'[\u0F00-\u0F14\s]+'  # at least one of the Tibetan punctuation or space-like characters
+    tsekpattern = r'[\u0F00-\u0F14\u0F3A-\u0F3D\u0FD2-\u0FD8\s]+'  # at least one of the Tibetan punctuation or space-like characters
     tskcount = 0
     donefirst = False
 
     def convertdoc(self):
         self.current_file_path = path.join(self.indir, self.current_file)
         self.worddoc = docx.Document(self.current_file_path)
-        pct = 0
+        self.merge_runs()
         totalpct = len(self.worddoc.paragraphs)
+        pct = 0
+        # Reset class variables for each document
+        self.pgct = 1
+        self.lnct = 0
+        self.ct = 0
+        self.tskcount = 0
+        self.donefirst = False
+
         print("Inserting placeholders ...")
+
         foundhead = False
         for p in self.worddoc.paragraphs:
             pct += 1
@@ -49,7 +58,7 @@ class DigitalPages(BaseConverter):
             # After that ignore headers and only proc ess non-headers
             if 'Heading' not in psnm:
                 self.insert_ms(p)
-                # self.apply_styles(p)
+                self.apply_styles(p)
         print("\n")
         self.outfile = path.join(self.outdir, self.current_file.replace('.doc', '-out.doc'))
         self.worddoc.save(self.outfile)
@@ -58,7 +67,11 @@ class DigitalPages(BaseConverter):
         for r in p.runs:
             inserts = []
             rtxt = r.text
+            endindex = -1
             for m in re.finditer(self.tsekpattern, rtxt):
+                endindex = m.end()
+                if m.start() == 0:
+                    continue
                 self.tskcount += 1
                 if self.tskcount == self.tsek_per_line:
                     self.lnct += 1
@@ -70,6 +83,7 @@ class DigitalPages(BaseConverter):
                         inserts.append(('line', f"{self.pgct}.{self.lnct + 1}", m))
                     else:
                         inserts.append(('line', f"{self.pgct}.{self.lnct + 1}", m))
+
             inserts.reverse()
             for ins in inserts:
                 mstype, msnum, m = ins
@@ -83,19 +97,44 @@ class DigitalPages(BaseConverter):
                 self.donefirst = True
 
     def apply_styles(self, p):
+        newp = p.insert_paragraph_before('', p.style)
         for r in p.runs:
             rtxt = r.text
             pgrex = '\[' + self.tmplts["page"] + '\s+\d+\]'
             mtchs = [m for m in re.finditer(pgrex, rtxt)]
             if len(mtchs) > 0:
-                mtchs.reverse()
-                for mtch in mtchs:
-                    currun = rtxt[:mtch.start() - 1]
-                    ms = rtxt[mtch.start():mtch.end() + 1]
-                    postrun = rtxt[:mtch.end() + 1]
-                    r.text = currun
-                    msrun = self.add_run(r, ms, self.digstyles['page'])
-                    pr = self.add_run(msrun, postrun, r.style.name)
+                newp.add_run(rtxt[:mtchs[0].start()], r.style)
+                for mi, mtch in enumerate(mtchs):
+                    ms = rtxt[mtch.start():mtch.end()]
+                    ms = ms.replace(self.tmplts["page"] + ' ', '')
+                    newp.add_run(ms, self.worddoc.styles[self.digstyles['page']])
+                    endindex = mtchs[mi + 1].start() if mi < len(mtchs) - 1 else len(rtxt)
+                    postrun = rtxt[mtch.end():endindex]
+                    newp.add_run(postrun, r.style)
+            else:
+                newp.add_run(r.text, r.style)
+        self.delete_paragraph(p)
+        # Do Line milestones
+        newp2 = newp.insert_paragraph_before('', newp.style)
+        for r in newp.runs:
+            rtxt = r.text
+            pgrex = '\[' + self.tmplts["line"] + '\s+\d+\.\d+\]'
+            mtchs = [m for m in re.finditer(pgrex, rtxt)]
+            if len(mtchs) > 0:
+                # Add text before first match
+                newp2.add_run(rtxt[:mtchs[0].start()], r.style)
+                for mi, mtch in enumerate(mtchs):
+                    # add milestone run
+                    ms = rtxt[mtch.start():mtch.end()]
+                    ms = ms.replace(self.tmplts["line"] + ' ', '')
+                    newp2.add_run(ms, self.worddoc.styles[self.digstyles['line']])
+                    # Add post milestone run
+                    endindex = mtchs[mi + 1].start() if mi < len(mtchs) - 1 else len(rtxt)
+                    postrun = rtxt[mtch.end():endindex]
+                    newp2.add_run(postrun, r.style)
+            else:
+                newp2.add_run(r.text, r.style)
+        self.delete_paragraph(newp)
 
     def add_run(self, r, txt, style_name):
         runel = CT_R()
@@ -104,6 +143,12 @@ class DigitalPages(BaseConverter):
         newrun.text = txt
         newrun.style = self.worddoc.styles[style_name]
         return newrun
+
+    @staticmethod
+    def delete_paragraph(paragraph):
+        p = paragraph._element
+        p.getparent().remove(p)
+        p._p = p._element = None
 
 
 ####### OLD CODE ########

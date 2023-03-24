@@ -5,13 +5,7 @@ But not yet finalized
 """
 import os
 import logging
-import re
-import zipfile
-import docx
-from lxml import etree
-
-from datetime import date
-from styleelements import getStyleElement
+from styleelements import fontSame
 
 TEMPLATE_FOLDER = 'templates'
 
@@ -77,3 +71,37 @@ class BaseConverter:
 
     def convertdoc(self):
         pass
+
+    def merge_runs(self):
+        '''
+        Take a document and go through all runs in all paragraphs, if two consecutive runs have the same style, then merge them
+
+        :param doc:
+        :return:
+        '''
+        totp = len(self.worddoc.paragraphs)
+        ct = 0
+        for para in self.worddoc.paragraphs:
+            ct += 1
+            print("\rMerging runs: {}%".format(int(ct/totp*100)), end='')
+            runs2remove = []
+            lastrun = False
+            # Merge runs with same style
+            for n, r in enumerate(para.runs):
+                if lastrun is False:
+                    # if false no last run to compare, set lastrun
+                    lastrun = r
+                elif not fontSame(lastrun, r):
+                    lastrun = r
+                elif r.style.name == lastrun.style.name:
+                    # Otherwise is charstyle and font characteristics are the same, append the two
+                    lastrun.text += r.text
+                    runs2remove.append(r)
+                else:
+                    # if style name is different and font characteristics are the same, start a new run (lastrun = r)
+                    lastrun = r
+            # Remove all runs thus merged
+            for rr in runs2remove:
+                el = rr._element
+                el.getparent().remove(el)
+        print("")
