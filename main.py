@@ -1,8 +1,10 @@
 #!env/bin/python
 
 import argparse
-from textconverter import TextConverter
-from digitalpages import DigitalPages
+
+from converters.numberpages import NumberPages
+from converters.textconverter import TextConverter
+from converters.digitalpages import DigitalPages
 
 
 def main():
@@ -23,6 +25,9 @@ def main():
     parser.add_argument('-e', '--edition-sigla',
                         default='',
                         help="The main edition sigla to be used for a lemma readings")
+    parser.add_argument('-ext', '--extension',
+                        default='.docx',
+                        help="The extension by which to filter the indocs")
     parser.add_argument('-i', '--indir',
                         default='./workspace/in',
                         help='The relative path to the in-folder containing files to be converted. '
@@ -44,6 +49,9 @@ def main():
     parser.add_argument('-ow', '--overwrite',
                         action='store_true',
                         help='Overwrite XML files by the same name in out directory')
+    parser.add_argument('-st', '--start',
+                        default=1,
+                        help="The incremental number to start with")
     parser.add_argument('-t', '--template',
                         default='tib_text.xml',
                         help='Name of template file in template folder')
@@ -52,12 +60,15 @@ def main():
                         default="word-2-xml",
                         help='Type of conversion to perform')
 
-    args = parser.parse_args()
+    args, extras = parser.parse_known_args()
 
     # Initialize appropriate converter for type
     if args.type == 'digpage':
         print("Digital Page conversions!")
         converter = DigitalPages(args)
+    elif args.type == 'numpage':
+        print("Numbering Existing Milestones!")
+        converter = NumberPages(args, extras)
     else:
         print("Word to XML Conversion")
         converter = TextConverter(args)

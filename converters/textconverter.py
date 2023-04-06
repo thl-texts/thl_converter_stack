@@ -9,12 +9,12 @@ import unicodedata
 import zipfile
 import html
 import docx
-import json
 from lxml import etree
 
 from datetime import date
-from styleelements import getStyleElement, fontSame, getFontElement
+from .styleelements import getStyleElement, getFontElement, buildElement
 from w3lib.html import replace_entities
+from .baseconverter import BaseConverter
 
 TEMPLATE_FOLDER = 'templates'
 IGNORABLE_STYLES = ['Paragraph Char', 'List Bullet Char']
@@ -42,67 +42,19 @@ def get_lang_by_char(chr):
     return ''
 
 
-class TextConverter:
-
+class TextConverter(BaseConverter):
     def __init__(self, args):
-        self.args = args
-        self.files = []
-        self.current_file = ''
-        self.current_file_path = ''
-        self.indir = args.indir
-        if not os.path.isdir(self.indir):
-            raise NotADirectoryError("The in path, {}, is not a directory".format(self.indir))
-        self.getfiles()
-        self.outdir = args.out
-        self.overwrite = args.overwrite
-        if not os.path.isdir(self.outdir):
-            raise NotADirectoryError("The out path, {}, is not a directory".format(self.outdir))
-        self.metafields = args.metafields if args.metafields else False
-        self.template = args.template
-        self.xmltemplate = ''
-        self.dtdpath = args.dtdpath
-        self.debug = args.debug if args.debug else False
-        self.worddoc = None
-        self.nsmap = None
-        self.metatable = None
+        super().__init__(args)
         self.footnotes = {}
         self.fncount = 0
         self.endnotes = {}
         self.endntcount = 0
-        self.xmlroot = None
-        self.headstack = []
-        self.current_el = None
-        self.pindex = -1
         self.edsig = args.edition_sigla
         if self.edsig:
             print(f"Using edition sigla from command argurments: {self.edsig}")
-        self.chapnum = None
-        self.textid = ''
         self.in_multiline_apparatus = False
         self.multiline_apparatus_num = 0
         self.multiline_apparatus_el = None
-
-        self.log = args.log
-        self.loglevel = logging.DEBUG if self.debug else logging.WARN
-        logging.basicConfig(level=self.loglevel)
-
-    def getfiles(self):
-        files_in_dir = os.listdir(self.indir)
-        files_in_dir.sort()
-        for sfile in files_in_dir:
-            if sfile.endswith(".docx") and not sfile.startswith('~'):
-                self.files.append(sfile)
-
-    def setlog(self):
-        # fname = os.path.split(fname)[1].replace('.docx', '') + '.log'
-        logpath = os.path.join(self.log, self.current_file.replace('docx', 'log'))
-        if self.debug:
-            print("Log file for {} is: {}".format(self.current_file, logpath))
-        loghandler = logging.FileHandler(logpath, 'w')
-        log = logging.getLogger()
-        for hdlr in log.handlers[:]:
-            log.removeHandler(hdlr)
-        log.addHandler(loghandler)
 
     def convert(self):
         for fl in self.files:
@@ -287,7 +239,7 @@ class TextConverter:
             xml_en_root = etree.fromstring(xml_content)
 
             # To output the endnote XML file from Word uncomment the lines below:
-            with open('./workspace/logs/endnotes-test.xml', 'wb') as xfout:
+            with open('../workspace/logs/endnotes-test.xml', 'wb') as xfout:
                 xfout.write(etree.tostring(xml_en_root))
 
             enindex = 0
@@ -819,9 +771,10 @@ class TextConverter:
             # Footnotes
             elif "footnote" in char_style.lower():
                 style_before_footnote = last_run_style
-                fnnum, note = self.getFootnoteFromRefRun(run)
+                fnnum, note = self.get_footnote_from_ref(run)
                 if not note:
-                    self.mylog(f"\n\tCould not find footnote object for {fnnum}")
+                    if len(fnnum) > 0 and len(run.text) > 0:
+                        self.mylog(f"\n\tCould not find footnote object for {fnnum}, [{run.text}]")
                     return
 
                 if note['is_annotation']:
@@ -863,7 +816,7 @@ class TextConverter:
                         self.mylog("On note {}, with markup: {}".format(fnnum, note_mu))
 
             # Milestones
-            elif "Page Number" in char_style or "Line Number" in char_style:
+            elif "page number" in char_style.lower() or "line number" in char_style.lower():
                 # If there are multiple ms of the same style, they get merged in merge_runs. So split them up
                 msitems = rtxt.split('][')
                 for mstxt in msitems:
@@ -1136,7 +1089,7 @@ class TextConverter:
                 paragraph_processed = True  # This returns true to prevent further processing of this paragraph
                 srcs = []
                 if p.runs[1].style.name == 'footnote reference':
-                    nnum, note = self.getFootnoteFromRefRun(p.runs[1])
+                    nnum, note = self.get_footnote_from_ref(p.runs[1])
                     srcs = [pt.strip() for pt in note['text'].split(',')]
                 else:
                     self.mylog("Closing brace for multi-line apparatus is not followed by footnote")
@@ -1199,29 +1152,22 @@ class TextConverter:
 
     @staticmethod
     def createmilestone(char_style, mstxt):
-        mstype = 'line' if 'line' in char_style.lower() else 'page'  # defaults to page
         msnum = mstxt.replace('[', '').replace(']', '')   # Default backup num if regex doesn't match
-        mtch = re.match(r'\[?(Page|Line)\s+([^\]]+)\]?', mstxt, re.IGNORECASE)
+        mtch = re.match(r'\[?(page|line\s+)?([^\]]+)\]?', mstxt, re.IGNORECASE)
         if mtch:
-            mstype = mtch.group(1)
+            # Discard the "page" or "line" part, i.e., mtch.group(1), as this can be resupplied by xslt in display.
             msnum = mtch.group(2)
         else:  # In TCD some formatting weirdness in page milestones read as: [21-page Dg]
             mtch = re.match(r'\[?(\d)+\-page\s+([^\]]+)\]?', mstxt, re.IGNORECASE)
             if mtch:
-                mstype = 'page'
-                msnum = mtch.group(2) + '-' + mtch.group(1)
-            # else:s
-            #    logging.warning("No match for milestone parts in {}".format(mstxt))
-        msel = getStyleElement(char_style)
-        msel.set('unit', mstype)
-        sep = '.' if '.' in msnum else '-'  # Do we need to check for more separators
-        pts     = msnum.split(sep)
-        if len(pts) > 1:
-            msel.set('ed', pts[0])
-            msel.set('n', pts[1])
-        else:
-            msel.set('n', pts[0])
-        return msel
+                msnum = mtch.group(2) + '-' + mtch.group(1)  # 2 is Ed sig and 1 is pagenum
+        # Check for milestones with ed sigla in pagination, as in TCD: [page Ad-7] which will yield a msnum of Ad-7
+        ed = False
+        if re.match(r'\w+-\[\dab]+', msnum):
+            ed, msnum = msnum.split('-')
+        ed = [] if ed is False else [ed]
+        ms = buildElement(char_style, msnum, ed)
+        return etree.XML(ms)
 
     def reset_current_el(self):
         """
@@ -1458,7 +1404,7 @@ class TextConverter:
         for paragraph in self.worddoc.paragraphs:
             for run in paragraph.runs:
                 if run.style.name == 'footnote reference':
-                    fnnum, note = self.getFootnoteFromRefRun(run, False)
+                    fnnum, note = self.get_footnote_from_ref(run, False)
                     if fnnum == nnum:
                         if prevrun and prevrun.text:
                             # print(f"text before note {nnum}: {prevrun.text}")
@@ -1466,25 +1412,25 @@ class TextConverter:
                 prevrun = run
         return prevrun
 
-    def getFootnoteFromRefRun(self, run, include_note=True):
+    def get_footnote_from_ref(self, run, include_note=True):
         # Get the footnote number from the run containing the "footnote reference"
         # Second element in footnote ref container has the number/id: <w:footnoteReference w:id="2"/>
         # The full attribute is {http://schemas.openxmlformats.org/wordprocessingml/2006/main}id
         # Easier just to pop the first key from the attribute dictionary of that element
         runel = run.element
-        try:
-            fnref = runel[1]
-        except IndexError as ie:
-            self.mylog("index error: {}".format(ie))
         fnnum = ""
         note = None
-
-        if len(fnref.keys()) > 0:
-            idkey = '{' + self.nsmap['w'] + '}id'
-            fnnum = fnref.get(idkey)
-            # print("doing footnote {}".format(fnnum))
-            if include_note:
-                note = self.footnotes[fnnum]
+        try:
+            fnref = runel[1]
+            if len(fnref.keys()) > 0:
+                idkey = '{' + self.nsmap['w'] + '}id'
+                fnnum = fnref.get(idkey)
+                # print("doing footnote {}".format(fnnum))
+                if include_note:
+                    note = self.footnotes[fnnum]
+        except IndexError as ie:
+            if self.debug:
+                self.mylog("index error: {}".format(ie))
 
         return fnnum, note
 

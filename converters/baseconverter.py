@@ -5,17 +5,19 @@ But not yet finalized
 """
 import os
 import logging
-from styleelements import fontSame
+from .styleelements import fontSame
 
 TEMPLATE_FOLDER = 'templates'
 
 
 class BaseConverter:
-    def __init__(self, args):
+    def __init__(self, args, other_settings=None):
+        self.args = args
         self.files = []
         self.current_file = ''
         self.current_file_path = ''
         self.indir = args.indir
+        self.infile_ext = args.extension
         if not os.path.isdir(self.indir):
             raise NotADirectoryError("The in path, {}, is not a directory".format(self.indir))
         self.getfiles()
@@ -28,7 +30,9 @@ class BaseConverter:
         self.xmltemplate = ''
         self.dtdpath = args.dtdpath
         self.debug = args.debug if args.debug else False
+        self.debug_store = []
         self.worddoc = None
+        self.nsmap = None
         self.metatable = None
         self.footnotes = []
         self.endnotes = []
@@ -38,16 +42,17 @@ class BaseConverter:
         self.pindex = -1
         self.edsig = ''
         self.chapnum = None
-
+        self.textid = ''
         self.log = args.log
         self.loglevel = logging.DEBUG if self.debug else logging.WARN
         logging.basicConfig(level=self.loglevel)
+        self.other_settings = other_settings
 
     def getfiles(self):
         files_in_dir = os.listdir(self.indir)
         files_in_dir.sort()
         for sfile in files_in_dir:
-            if sfile.endswith(".docx") and not sfile.startswith('~'):
+            if sfile.endswith(self.infile_ext) and not sfile.startswith('~'):
                 self.files.append(sfile)
 
     def setlog(self):

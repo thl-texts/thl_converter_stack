@@ -51,8 +51,8 @@ keydict = {
     "lang-sans": ["Lang Sanskrit"],
     "lang-span": ["Lang Spanish"],
     "lang-tib": ["Lang Tibetan"],
-    "line-num": ["line number", "LineNumber"],
-    "line-num-dig": ["Line Number,digital"],
+    # "line-num": ["line number", "LineNumber"],
+    "line-num-dig": ["Line Number,digital", "line number"],
     "line-num-print": ["Line Number Print"],
     "line-num-tib": ["Line Number Tib"],
     "mantra": ["X-Mantra"],
@@ -70,7 +70,8 @@ keydict = {
     "name-pers-other": ["X-Name Personal Other", "Name Personal Other"],
     "name-place": ["X-Name Place", "Name Place"],
     "name-rel-pract": ["X-Religious Practice", "Religious practice", "Name ritual"],
-    "page-num": ["PageNumber", "page number"],
+    # "page-num": ["PageNumber", "page number"],
+    "page-num-dig": ["page number"],
     "page-num-print-ed": ["Page Number Print Edition"],
     "pages": ["Pages"],
     # "placeholder-text": ["Placeholder Text1"],
@@ -243,7 +244,7 @@ elements = {
     },
     "line-num-dig": {
         "tag": "milestone",
-        "attributes": {"unit": "digline"},
+        "attributes": {"unit": "digline", "n": "%TXT%"},
     },
     "line-num-print": {
         "tag": "milestone",
@@ -316,6 +317,10 @@ elements = {
     "page-num": {
         "tag": "milestone",
         "attributes": {"unit": "page", "n": "%TXT%"},
+    },
+    "page-num-dig": {
+        "tag": "milestone",
+        "attributes": {"unit": "digpage", "n": "%TXT%"},
     },
     "page-num-print-ed": {
         "tag": "milestone",
@@ -543,7 +548,7 @@ def getTagFromStyle(style_name):
     elout = "<{0}".format(eldef['tag'])
     for att in eldef['attributes']:
         elout += ' {0}="{1}"'.format(att, eldef['attributes'][att])
-        elout += '></{0}>'.format(eldef['tag'])
+    elout += '></{0}>'.format(eldef['tag'])
     return elout
 
 
@@ -580,9 +585,10 @@ def buildElement(stynm, text=None, vals=list()):
         elif '></' in el:
             el = el.replace('></', '>{0}</'.format(text))
 
+    if '<milestone' in el and len(vals) == 1:
+        el.replace('>', f' ed="{vals[0]}>', 1)
     for n, v in vals:
         el = el.replace('%{0}%'.format(n), v)
-
     return el
 
 
