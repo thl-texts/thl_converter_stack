@@ -87,6 +87,7 @@ class NumberPages(BaseConverter):
 
     def number_milestones(self):
         root = self.xmlroot
+        rnd = int(root.get('rend')) if root.get('rend') and root.get('rend').isdigit() else False
         milestones = root.xpath('//milestone')
         line_unit = 'line'
         if self.add_first:
@@ -97,6 +98,8 @@ class NumberPages(BaseConverter):
                     break
 
         pnm = self.stnum - 1
+        if rnd:
+            pnm += rnd
         lnm = 0
         for ms in milestones:
             unit = ms.get('unit')
@@ -105,13 +108,13 @@ class NumberPages(BaseConverter):
                 lnm = 0
                 ms.set('n', str(pnm))
                 if self.add_first:
-                    lnms = etree.XML(f'<milestone unit="{line_unit}" n="1" />')
+                    lnms = etree.XML(f'<milestone unit="{line_unit}" n="{pnm}.1" />')
                     ms.addnext(lnms)
                     lnm = 1
 
             elif 'line' in unit.lower():
                 lnm += 1
-                ms.set('n', str(lnm))
+                ms.set('n', f"{pnm}.{lnm}")
 
     def write_xml(self):
         fpth = path.join(self.outdir, self.current_file)
