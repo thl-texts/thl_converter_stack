@@ -239,7 +239,9 @@ class TextConverter(BaseConverter):
             xml_en_root = etree.fromstring(xml_content)
 
             # To output the endnote XML file from Word uncomment the lines below:
-            with open('../workspace/logs/endnotes-test.xml', 'wb') as xfout:
+            # if not os.path.exists('../workspace/logs/endnotes-test.xml'):
+            #    os.makedirs('../workspace/logs/endnotes-test.xml')
+            with open('./workspace/logs/endnotes-test.xml', 'wb') as xfout:
                 xfout.write(etree.tostring(xml_en_root))
 
             enindex = 0
