@@ -41,17 +41,28 @@ The converter takes essays or texts in Microsoft Word documents and converts the
 the text in the Word docs must be "marked up" with THL custom styles. These are found in 
 [our custom Word Template](https://drive.google.com/file/d/1RN71aJESmmQq4cQaZIVd_I8hzqJaZahx/view?usp=sharing). 
 
-The
-instructions for how to use the styles can be found in the 
+In this repository the document to start with is `./templates/WordTemplates/TextMetadataTable2020.docx`. This is a Word
+document with a metadata table and the initial sections for Front, Body, and Back. These three overall sections of a 
+text have specific styles `Heading 0 Front`, `Heading 0 Body`, and `Heading 0 Back`. The text in those lines can be 
+whatever you want for the header of that section. The minimum needed is at least the `Heading 0 Body`. Under this,
+there should be a paragraph with the style `Heading 1` which represent the first chapter, again the text in that 
+header paragraph can be whatever you want to display as the heading for that section. Subsections are then 
+marked up with styles `Heading 2`. After any of the header, you can include a `paragraph` style to include a regular 
+paragraph in that section. Similarly, other paragraphs styles are converted into other forms of structural markup, 
+while character styles are transformed into inline markup as per the documentation.
+
+The instructions, or documentation, for how to use the styles can be found in the 
 [THL Text Editing Manual style guide](https://docs.google.com/document/d/1BJEwSXzXwwqgY9xPbNor-RmsZHpmVqjOb6JMwTiPVUY/edit). 
 
 
-At the beginning of the Word document should be a 
-[metadata table](https://drive.google.com/file/d/16pzm1cxMgGZTccU9-kY72hSKC2ihTZQd/view?usp=sharing). 
-Instructions for filling out the metadata table are also found in the editing manual.
+At the beginning of the Word document should be a metadata table. This is included in the template, 
+ `./templates/WordTemplates/TextMetadataTable2020.docx`. But the standalone table can also be found at 
+[this link](https://drive.google.com/file/d/16pzm1cxMgGZTccU9-kY72hSKC2ihTZQd/view?usp=sharing).
+If this is filled out, then the bibliographic information provided is inserted into the metadata header of 
+the XML document. Instructions for filling out the metadata table are also found in the editing manual.
 
 
 Than Grove  
 Created Oct. 30, 2020  
-Updated March 10, 2021
+Updated Aug 4, 2023
 
