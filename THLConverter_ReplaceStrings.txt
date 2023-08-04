@@ -1,0 +1,33 @@
+
+### dox-div-template.xml
+* `__DOXID__` : the doxographical id
+* `__DOXLVL__` : the level of the doxographical cateogory, initial categories are 1, sub-categories 2, etc.
+* `__DOXNUM__` : the doxgraphical number to be displayed, e.g., 1.2.3
+* `__TITLETIB__` : the Tibetan title (dox)
+* `__TITLEWY__` : the Tibetan title in Wylie (dox)
+* `__TITLEENG__` : the English translation of the title (dox)
+* `__STVOL__` : the start volume for a doxographical category
+* `__ENDVOL__` : the end volume for a doxographical category
+* `__STTXT__` : the ID for the initial text in a doxographical category
+* `__ENDTXT__` : the ID for the last text in a doxographical category
+
+### text-bib-template.xml
+* `__BIBID__  : a bibl ID for a text
+* `__VOLNUM__` : a text's volume number
+
+### text-div-template.xml
+* `__ID__` : a text catalog div's ID
+* `__TITLE__` : the text's title for a text catalog div
+* `__IDNUM__` : the displayed ID number for a text
+* `__OLDIDNUM__` : the text's old ID number
+* `__DOCPATH__` : (not sure)
+* `__VOLNUM__` : volume number for a text
+* `__VOLTEXT__` : the number of the text within the volume
+* `__STARTPG__` : starting page for the text
+* `__ENDPG__` : ending page for the text
+
+### vol-div-template.xml
+* `__VID__` : volume system ID
+* `__VNUM__` : volume number
+* `__STTXT__` : start text
+* `__ENDTXT__` : end text
